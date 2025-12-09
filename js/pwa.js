@@ -5,12 +5,20 @@ let swRegistration = null;
 
 // Initialize PWA
 function initPWA() {
-    // Register service worker
+    // Register service worker - detect correct path
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('../service-worker.js')
+        // Determine the correct path based on current location
+        const swPath = window.location.pathname.includes('/html/') 
+            ? '../service-worker.js' 
+            : './service-worker.js';
+        
+        navigator.serviceWorker.register(swPath)
             .then(registration => {
                 console.log('Service Worker registered:', registration);
                 swRegistration = registration;
+                
+                // Force check for updates immediately
+                registration.update();
                 
                 // Check for updates
                 registration.addEventListener('updatefound', () => {
@@ -25,6 +33,11 @@ function initPWA() {
             .catch(error => {
                 console.error('Service Worker registration failed:', error);
             });
+            
+        // Listen for controller change and reload
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            window.location.reload();
+        });
     }
     
     // Handle install prompt
@@ -90,12 +103,50 @@ function showUpdateNotification() {
     }, 100);
 }
 
-// Update app
+// Update app - force reload with cache clear
 function updateApp() {
-    if (!swRegistration || !swRegistration.waiting) return;
+    // Clear all caches
+    if ('caches' in window) {
+        caches.keys().then(names => {
+            names.forEach(name => {
+                caches.delete(name);
+            });
+        });
+    }
     
-    swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
-    window.location.reload();
+    // Tell waiting service worker to take over
+    if (swRegistration && swRegistration.waiting) {
+        swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+    }
+    
+    // Force reload from server
+    window.location.reload(true);
+}
+
+// Force update - clears everything
+function forceUpdate() {
+    // Unregister all service workers
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+            registrations.forEach(registration => {
+                registration.unregister();
+            });
+        });
+    }
+    
+    // Clear all caches
+    if ('caches' in window) {
+        caches.keys().then(names => {
+            names.forEach(name => {
+                caches.delete(name);
+            });
+        });
+    }
+    
+    // Reload after a short delay
+    setTimeout(() => {
+        window.location.reload(true);
+    }, 500);
 }
 
 // Check if running as PWA
@@ -120,6 +171,7 @@ window.pwaMethods = {
     init: initPWA,
     install: promptInstall,
     update: updateApp,
+    forceUpdate: forceUpdate,
     isInstalled: isRunningAsPWA,
     requestNotifications: requestNotificationPermission
 };
