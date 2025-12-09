@@ -8,12 +8,6 @@ function checkLogin() {
     if (currentUser) {
         const user = JSON.parse(currentUser);
         
-        // Redirect old pages to new structure
-        if (currentPage === 'dashboard.html') {
-            window.location.href = 'login.html';
-            return;
-        }
-        
         // Redirect to goals if user is already logged in and tries to access login/signup pages
         if (currentPage === 'login.html' || currentPage === 'signup.html') {
             window.location.href = 'goals.html';

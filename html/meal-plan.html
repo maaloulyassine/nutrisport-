@@ -284,15 +284,26 @@
             
             let html = '';
             
+            // Get the days data from plan.days
+            const planDays = plan.days || plan;
+            
             days.forEach((day, index) => {
-                const dayData = plan[day];
+                const dayData = planDays[day];
+                if (!dayData) return;
+                
                 const dayId = day.toLowerCase();
                 const isActive = index === 0 ? 'show active' : '';
                 
-                totalCalories += dayData.totals.calories;
-                totalProteins += dayData.totals.proteins;
-                totalCarbs += dayData.totals.carbs;
-                totalFats += dayData.totals.fats;
+                // Handle both formats: totalCalories or totals.calories
+                const dayCals = dayData.totalCalories || (dayData.totals && dayData.totals.calories) || 0;
+                const dayProts = dayData.totalProteins || (dayData.totals && dayData.totals.proteins) || 0;
+                const dayCarbs = dayData.totalCarbs || (dayData.totals && dayData.totals.carbs) || 0;
+                const dayFats = dayData.totalFats || (dayData.totals && dayData.totals.fats) || 0;
+                
+                totalCalories += dayCals;
+                totalProteins += dayProts;
+                totalCarbs += dayCarbs;
+                totalFats += dayFats;
                 
                 html += `
                     <div class="tab-pane fade ${isActive}" id="${dayId}" role="tabpanel">
@@ -301,25 +312,25 @@
                             <div class="row mb-4">
                                 <div class="col-md-3">
                                     <div class="text-center p-2 bg-white rounded">
-                                        <strong class="text-primary">${dayData.totals.calories}</strong>
+                                        <strong class="text-primary">${dayCals}</strong>
                                         <small class="d-block text-muted">kcal</small>
                                     </div>
                                 </div>
                                 <div class="col-md-3">
                                     <div class="text-center p-2 bg-white rounded">
-                                        <strong class="text-danger">${dayData.totals.proteins}g</strong>
+                                        <strong class="text-danger">${dayProts}g</strong>
                                         <small class="d-block text-muted">Protéines</small>
                                     </div>
                                 </div>
                                 <div class="col-md-3">
                                     <div class="text-center p-2 bg-white rounded">
-                                        <strong class="text-warning">${dayData.totals.carbs}g</strong>
+                                        <strong class="text-warning">${dayCarbs}g</strong>
                                         <small class="d-block text-muted">Glucides</small>
                                     </div>
                                 </div>
                                 <div class="col-md-3">
                                     <div class="text-center p-2 bg-white rounded">
-                                        <strong class="text-info">${dayData.totals.fats}g</strong>
+                                        <strong class="text-info">${dayFats}g</strong>
                                         <small class="d-block text-muted">Lipides</small>
                                     </div>
                                 </div>
@@ -338,9 +349,19 @@
                     'diner': { icon: 'fa-moon', color: 'secondary', name: 'Dîner' }
                 };
                 
-                for (const [mealType, meal] of Object.entries(dayData.meals)) {
-                    if (meal) {
+                // Handle both array and object meals format
+                const meals = Array.isArray(dayData.meals) ? dayData.meals : Object.entries(dayData.meals);
+                
+                if (Array.isArray(dayData.meals)) {
+                    // Array format from generateMealPlan
+                    dayData.meals.forEach(meal => {
+                        const mealType = meal.category || 'dejeuner';
                         const icon = mealIcons[mealType] || { icon: 'fa-utensils', color: 'primary', name: mealType };
+                        const cals = meal.adjustedCalories || meal.calories;
+                        const prots = meal.adjustedProteins || meal.proteins;
+                        const carbs = meal.adjustedCarbs || meal.carbs;
+                        const fats = meal.adjustedFats || meal.fats;
+                        
                         html += `
                             <div class="col-md-6 col-lg-4">
                                 <div class="card meal-card h-100">
@@ -355,18 +376,51 @@
                                     <div class="card-body">
                                         <h6 class="card-title">${meal.name}</h6>
                                         <div class="d-flex flex-wrap mb-2">
-                                            <span class="badge bg-light text-dark me-1">${meal.calories} kcal</span>
-                                            <span class="badge bg-danger bg-opacity-10 text-danger me-1">P: ${meal.proteins}g</span>
-                                            <span class="badge bg-warning bg-opacity-10 text-warning me-1">G: ${meal.carbs}g</span>
-                                            <span class="badge bg-info bg-opacity-10 text-info">L: ${meal.fats}g</span>
+                                            <span class="badge bg-light text-dark me-1">${cals} kcal</span>
+                                            <span class="badge bg-danger bg-opacity-10 text-danger me-1">P: ${prots}g</span>
+                                            <span class="badge bg-warning bg-opacity-10 text-warning me-1">G: ${carbs}g</span>
+                                            <span class="badge bg-info bg-opacity-10 text-info">L: ${fats}g</span>
                                         </div>
                                         <div class="mt-2">
-                                            ${meal.ingredients.map(i => `<span class="ingredient-tag">${i}</span>`).join('')}
+                                            ${meal.ingredients ? meal.ingredients.map(i => `<span class="ingredient-tag">${i}</span>`).join('') : ''}
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         `;
+                    });
+                } else {
+                    // Object format
+                    for (const [mealType, meal] of Object.entries(dayData.meals)) {
+                        if (meal) {
+                            const icon = mealIcons[mealType] || { icon: 'fa-utensils', color: 'primary', name: mealType };
+                            html += `
+                                <div class="col-md-6 col-lg-4">
+                                    <div class="card meal-card h-100">
+                                        <div class="card-header bg-${icon.color} bg-opacity-10">
+                                            <h6 class="mb-0">
+                                                <span class="meal-type-icon bg-${icon.color} text-white me-2">
+                                                    <i class="fas ${icon.icon}"></i>
+                                                </span>
+                                                ${icon.name}
+                                            </h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <h6 class="card-title">${meal.name}</h6>
+                                            <div class="d-flex flex-wrap mb-2">
+                                                <span class="badge bg-light text-dark me-1">${meal.calories} kcal</span>
+                                                <span class="badge bg-danger bg-opacity-10 text-danger me-1">P: ${meal.proteins}g</span>
+                                                <span class="badge bg-warning bg-opacity-10 text-warning me-1">G: ${meal.carbs}g</span>
+                                                <span class="badge bg-info bg-opacity-10 text-info">L: ${meal.fats}g</span>
+                                            </div>
+                                            <div class="mt-2">
+                                                ${meal.ingredients ? meal.ingredients.map(i => `<span class="ingredient-tag">${i}</span>`).join('') : ''}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
                     }
                 }
                 
@@ -402,28 +456,39 @@
                 return;
             }
             
-            if (typeof window.mealPlannerExport !== 'undefined') {
-                window.mealPlannerExport.toPDF(currentPlan);
-            } else {
-                // Simple text export
-                let text = '📅 PLAN DE REPAS HEBDOMADAIRE - NutriSport\n';
-                text += '═'.repeat(50) + '\n\n';
+            // Simple text export
+            let text = '📅 PLAN DE REPAS HEBDOMADAIRE - NutriSport\n';
+            text += '═'.repeat(50) + '\n\n';
+            
+            const planDays = currentPlan.days || currentPlan;
+            
+            for (const day in planDays) {
+                text += `📌 ${day.toUpperCase()}\n`;
+                const dayData = planDays[day];
                 
-                for (const day in currentPlan) {
-                    text += `📌 ${day.toUpperCase()}\n`;
-                    const dayData = currentPlan[day];
+                if (Array.isArray(dayData.meals)) {
+                    dayData.meals.forEach(meal => {
+                        const cals = meal.adjustedCalories || meal.calories;
+                        text += `  • ${meal.category || 'Repas'}: ${meal.name} (${cals} kcal)\n`;
+                    });
+                } else {
                     for (const [mealType, meal] of Object.entries(dayData.meals)) {
                         if (meal) {
                             text += `  • ${mealType}: ${meal.name} (${meal.calories} kcal)\n`;
                         }
                     }
-                    text += `  Total: ${dayData.totals.calories} kcal | P:${dayData.totals.proteins}g | G:${dayData.totals.carbs}g | L:${dayData.totals.fats}g\n\n`;
                 }
                 
-                navigator.clipboard.writeText(text).then(() => {
-                    alert('Plan copié dans le presse-papier !');
-                });
+                const cals = dayData.totalCalories || 0;
+                const prots = dayData.totalProteins || 0;
+                const carbs = dayData.totalCarbs || 0;
+                const fats = dayData.totalFats || 0;
+                text += `  Total: ${cals} kcal | P:${prots}g | G:${carbs}g | L:${fats}g\n\n`;
             }
+            
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Plan copié dans le presse-papier !');
+            });
         }
 
         // Load user's calorie goal from profile

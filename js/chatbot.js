@@ -5,9 +5,191 @@ let currentImageData = null;
 let isRecording = false;
 let recognition = null;
 let selectedFoods = []; // Pour la sélection manuelle
+let conversationContext = []; // Mémoire de conversation
 let aiConfig = {
     service: 'manual' // Mode intelligent par défaut (CV + ML)
 };
+
+// ===== SYSTÈME D'IA INTELLIGENT =====
+
+// Personnalité et variations de réponses
+const AI_PERSONALITY = {
+    greetings: [
+        "Salut {name} ! 👋 Comment je peux t'aider aujourd'hui ?",
+        "Hey {name} ! 🌟 Prêt pour optimiser ta nutrition ?",
+        "Bonjour {name} ! 💪 Qu'est-ce qu'on travaille ensemble ?",
+        "Coucou {name} ! 🎯 Je suis là pour t'accompagner !"
+    ],
+    encouragements: [
+        "Tu fais du super boulot {name} ! 🔥",
+        "Continue comme ça {name}, tu progresses ! 💪",
+        "Bravo {name}, reste motivé ! 🌟",
+        "T'es sur la bonne voie {name} ! 🎯"
+    ],
+    followUps: [
+        "Tu veux que je t'explique plus en détail ?",
+        "Est-ce que ça répond à ta question ?",
+        "Tu as d'autres questions sur ce sujet ?",
+        "Je peux te donner d'autres conseils si tu veux !"
+    ],
+    emojis: ['💪', '🔥', '🎯', '✨', '🌟', '💫', '⚡', '🏆']
+};
+
+// Mots-clés pour détecter le contexte émotionnel
+const EMOTION_KEYWORDS = {
+    frustrated: ['pas', 'marche pas', 'difficile', 'dur', 'compliqué', 'impossible', 'abandonner', 'arrêter'],
+    motivated: ['motivation', 'motivé', 'objectif', 'réussir', 'envie', 'prêt'],
+    curious: ['comment', 'pourquoi', 'quoi', 'quand', 'combien', 'quel', 'quelle'],
+    greeting: ['salut', 'bonjour', 'hello', 'coucou', 'hey', 'bonsoir', 'yo'],
+    thanks: ['merci', 'thanks', 'génial', 'super', 'parfait', 'excellent', 'top'],
+    casual: ['ça va', 'quoi de neuf', 'tu fais quoi', 'comment tu vas']
+};
+
+// Sujets de conversation pour mémoire
+const CONVERSATION_TOPICS = {
+    proteins: ['protéine', 'protein', 'viande', 'poulet', 'poisson', 'œuf', 'whey'],
+    calories: ['calorie', 'kcal', 'déficit', 'surplus', 'manger'],
+    workout: ['entraîn', 'sport', 'muscul', 'workout', 'exercice', 'gym'],
+    weight: ['poids', 'maigrir', 'grossir', 'masse', 'perdre', 'prendre'],
+    meals: ['repas', 'manger', 'petit-déj', 'déjeuner', 'dîner', 'collation'],
+    hydration: ['eau', 'boire', 'hydrat'],
+    sleep: ['sommeil', 'dormir', 'fatigue', 'récupér']
+};
+
+// Obtenir le prénom de l'utilisateur
+function getUserFirstName() {
+    const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    if (user.fullName) {
+        return user.fullName.split(' ')[0];
+    }
+    return user.email ? user.email.split('@')[0] : 'ami(e)';
+}
+
+// Obtenir le contexte utilisateur complet
+function getUserContext() {
+    const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    const profile = JSON.parse(localStorage.getItem(`profile_${user.email}`) || '{}');
+    const goal = JSON.parse(localStorage.getItem(`goal_${user.email}`) || '{}');
+    const diary = JSON.parse(localStorage.getItem(`foodDiary_${user.email}`) || '{}');
+    
+    const today = new Date().toISOString().split('T')[0];
+    const todayData = diary[today] || { totalCalories: 0, totalProteins: 0, totalCarbs: 0, totalFats: 0, meals: [] };
+    
+    // Calculer les jours consécutifs
+    let streak = 0;
+    let checkDate = new Date();
+    while (diary[checkDate.toISOString().split('T')[0]]) {
+        streak++;
+        checkDate.setDate(checkDate.getDate() - 1);
+    }
+    
+    return {
+        name: getUserFirstName(),
+        email: user.email,
+        weight: profile.currentWeight || 70,
+        height: profile.height || 170,
+        age: profile.age || 25,
+        gender: profile.gender || 'male',
+        goalCalories: goal.calories || 2000,
+        goalType: goal.type || 'maintien',
+        todayCalories: todayData.totalCalories || 0,
+        todayProteins: todayData.totalProteins || 0,
+        todayCarbs: todayData.totalCarbs || 0,
+        todayFats: todayData.totalFats || 0,
+        todayMeals: todayData.meals?.length || 0,
+        caloriesLeft: (goal.calories || 2000) - (todayData.totalCalories || 0),
+        streak: streak,
+        daysLogged: Object.keys(diary).length
+    };
+}
+
+// Détecter l'émotion dans le message
+function detectEmotion(message) {
+    const lower = message.toLowerCase();
+    
+    for (const [emotion, keywords] of Object.entries(EMOTION_KEYWORDS)) {
+        if (keywords.some(kw => lower.includes(kw))) {
+            return emotion;
+        }
+    }
+    return 'neutral';
+}
+
+// Détecter le sujet de conversation
+function detectTopic(message) {
+    const lower = message.toLowerCase();
+    
+    for (const [topic, keywords] of Object.entries(CONVERSATION_TOPICS)) {
+        if (keywords.some(kw => lower.includes(kw))) {
+            return topic;
+        }
+    }
+    return 'general';
+}
+
+// Ajouter au contexte de conversation
+function addToConversationContext(role, message, topic) {
+    conversationContext.push({
+        role,
+        message: message.substring(0, 100), // Garder un résumé
+        topic,
+        timestamp: Date.now()
+    });
+    
+    // Garder seulement les 10 derniers échanges
+    if (conversationContext.length > 10) {
+        conversationContext.shift();
+    }
+    
+    // Sauvegarder
+    const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    localStorage.setItem(`conversationContext_${user.email}`, JSON.stringify(conversationContext));
+}
+
+// Charger le contexte de conversation
+function loadConversationContext() {
+    const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    const saved = localStorage.getItem(`conversationContext_${user.email}`);
+    if (saved) {
+        conversationContext = JSON.parse(saved);
+    }
+}
+
+// Obtenir une réponse aléatoire d'une liste
+function getRandomResponse(responses, context) {
+    const response = responses[Math.floor(Math.random() * responses.length)];
+    return response.replace('{name}', context.name);
+}
+
+// Générer une analyse proactive du journal
+function generateProactiveInsight(context) {
+    const insights = [];
+    
+    // Analyse des calories
+    if (context.todayCalories === 0 && new Date().getHours() > 10) {
+        insights.push(`⏰ Hey ${context.name}, tu n'as encore rien mangé aujourd'hui ! N'oublie pas ton petit-déjeuner.`);
+    } else if (context.caloriesLeft < 0) {
+        insights.push(`⚠️ Tu as dépassé ton objectif de ${Math.abs(context.caloriesLeft)} kcal aujourd'hui. Pas de panique, demain est un nouveau jour !`);
+    } else if (context.caloriesLeft > 0 && context.caloriesLeft < 500 && new Date().getHours() > 18) {
+        insights.push(`🎯 Il te reste ${context.caloriesLeft} kcal - parfait pour un dîner léger !`);
+    }
+    
+    // Analyse des protéines
+    const proteinGoal = context.weight * 1.8;
+    const proteinLeft = proteinGoal - context.todayProteins;
+    if (proteinLeft > proteinGoal * 0.5 && new Date().getHours() > 14) {
+        insights.push(`💪 Tu n'as que ${context.todayProteins}g de protéines aujourd'hui. Pense à en ajouter au prochain repas !`);
+    }
+    
+    // Félicitations streak
+    if (context.streak >= 7) {
+        insights.push(`🔥 Incroyable ${context.name} ! ${context.streak} jours de suite que tu remplis ton journal !`);
+    } else if (context.streak >= 3) {
+        insights.push(`🌟 ${context.streak} jours consécutifs - tu crées une super habitude !`);
+    }
+    
+    return insights.length > 0 ? insights[Math.floor(Math.random() * insights.length)] : null;
+}
 
 // Quick suggestions avec catégories
 const quickSuggestions = [
@@ -42,6 +224,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     loadChatHistory();
+    loadConversationContext(); // Charger le contexte de conversation
     loadAIConfig();
     updateAPIAlert();
     checkLogin();
@@ -112,29 +295,7 @@ function saveAIConfig() {
     }
 }
 
-// API configuration removed - not needed anymore
-/*
-function showAPIConfig() {
-    const modal = new bootstrap.Modal(document.getElementById('apiConfigModal'));
-    const serviceSelect = document.getElementById('aiService');
-    if (serviceSelect) {
-        serviceSelect.value = aiConfig.service;
-    }
-    modal.show();
-    
-    // S'assurer que l'input file fonctionne après fermeture du modal
-    document.getElementById('apiConfigModal').addEventListener('hidden.bs.modal', function () {
-        console.log('✅ Modal fermé, réactivation de l\'upload');
-        const imageInput = document.getElementById('imageInput');
-        if (imageInput) {
-            imageInput.disabled = false;
-        }
-    });
-}
-*/
 
-// Update status text only
-// Update status text only
 function updateAPIAlert() {
     const statusText = document.getElementById('statusText');
     
@@ -730,12 +891,18 @@ function extractNutritionFromText(text) {
     return null;
 }
 
-// Demo AI responses
+// Demo AI responses - INTELLIGENT VERSION
 async function getDemoResponse(message, imageData) {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // Simulate API delay (variable pour plus de naturel)
+    await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1000));
     
     const lowerMessage = message?.toLowerCase() || '';
+    const context = getUserContext();
+    const emotion = detectEmotion(lowerMessage);
+    const topic = detectTopic(lowerMessage);
+    
+    // Ajouter au contexte de conversation
+    addToConversationContext('user', message, topic);
     
     // Image analysis
     if (imageData) {
@@ -758,30 +925,104 @@ async function getDemoResponse(message, imageData) {
             fats: (randomFood.fats * multiplier).toFixed(1)
         };
         
+        const responses = [
+            `📸 Super ${context.name} ! J'ai analysé ton repas !\n\n**${nutrition.dishName}**\n\nExcellent choix ! Ça t'apporte ${nutrition.calories} kcal. ${context.caloriesLeft > nutrition.calories ? `Il te restera ${context.caloriesLeft - nutrition.calories} kcal pour la journée.` : ''}`,
+            `🍽️ Hey ${context.name} ! Voici ce que j'ai trouvé :\n\n**${nutrition.dishName}**\n\n${nutrition.proteins > 20 ? '💪 Belle source de protéines !' : 'Un repas équilibré !'} Je l'ajoute à ton journal ?`,
+            `✨ Analyse terminée ${context.name} !\n\n**${nutrition.dishName}**\n\nTu fais de bons choix nutritionnels ! Continue comme ça 🎯`
+        ];
+        
         return {
-            text: `📸 **Analyse de votre repas**\n\nJ'ai identifié : **${nutrition.dishName}**\n\nC'est un excellent choix ! Voici les valeurs nutritionnelles estimées pour cette portion.`,
+            text: responses[Math.floor(Math.random() * responses.length)],
             nutrition: nutrition
         };
     }
     
-    // Get user context for personalized responses
-    let user = JSON.parse(localStorage.getItem('currentUser'));
-    let profile = JSON.parse(localStorage.getItem(`profile_${user.email}`) || '{}');
-    let goal = JSON.parse(localStorage.getItem(`goal_${user.email}`) || '{}');
-    let diary = JSON.parse(localStorage.getItem(`foodDiary_${user.email}`) || '{}');
+    // ===== RÉPONSES ÉMOTIONNELLES =====
     
-    let weight = profile.currentWeight || 70;
-    let height = profile.height || 170;
-    let age = profile.age || 25;
-    let gender = profile.gender || 'male';
-    let goalCalories = goal.calories || 2000;
+    // Salutations
+    if (emotion === 'greeting') {
+        const greetings = [
+            `Salut ${context.name} ! 👋 Comment ça va aujourd'hui ?\n\n${context.todayCalories > 0 ? `Tu as déjà consommé ${context.todayCalories} kcal aujourd'hui.` : 'Tu n\'as pas encore mangé - besoin d\'idées pour le petit-déj ?'}`,
+            `Hey ${context.name} ! 🌟 Content de te voir !\n\n${context.streak > 0 ? `${context.streak} jours de suite que tu remplis ton journal, bravo !` : 'Prêt à atteindre tes objectifs ?'}`,
+            `Coucou ${context.name} ! 😊 Qu'est-ce que je peux faire pour toi ?\n\n💡 Tu peux me demander des conseils, m'envoyer une photo de repas, ou juste discuter !`
+        ];
+        return { text: greetings[Math.floor(Math.random() * greetings.length)] };
+    }
     
-    // Today's intake
-    let today = new Date().toISOString().split('T')[0];
-    let todayData = diary[today] || { totalCalories: 0, totalProteins: 0 };
-    let caloriesLeft = goalCalories - todayData.totalCalories;
+    // Conversation casual
+    if (emotion === 'casual') {
+        const casual = [
+            `Ça va super ${context.name} ! 😄 Et toi ? Prêt pour une journée au top nutritionnellement ?`,
+            `Tranquille ! 😎 Je suis là pour t'aider. Tu as des questions sur la nutrition ou tu veux juste papoter ?`,
+            `Nickel ! ${context.name}, qu'est-ce que tu manges de bon aujourd'hui ? 🍽️`
+        ];
+        return { text: casual[Math.floor(Math.random() * casual.length)] };
+    }
     
-    // Nutrition questions - PROTÉINES
+    // Remerciements
+    if (emotion === 'thanks') {
+        const thanks = [
+            `Avec plaisir ${context.name} ! 😊 N'hésite pas si tu as d'autres questions !`,
+            `De rien ! 🌟 C'est un plaisir de t'accompagner dans tes objectifs !`,
+            `Content que ça t'aide ${context.name} ! 💪 Je suis là si tu as besoin !`,
+            `Pas de quoi ! Tu gères ${context.name} ! 🔥 Continue comme ça !`
+        ];
+        return { text: thanks[Math.floor(Math.random() * thanks.length)] };
+    }
+    
+    // Frustration / Découragement
+    if (emotion === 'frustrated') {
+        const encourage = [
+            `Hey ${context.name}, je comprends que ça peut être difficile parfois... 💙\n\nMais rappelle-toi : chaque petit pas compte ! Tu as déjà ${context.daysLogged} jours de suivi, c'est énorme !\n\nQu'est-ce qui te bloque ? Je suis là pour t'aider.`,
+            `${context.name}, ne te décourage pas ! 🌟\n\nLes progrès prennent du temps. L'important c'est la constance, pas la perfection.\n\nDis-moi ce qui est compliqué, on va trouver une solution ensemble !`,
+            `Je suis là ${context.name} 💪\n\nTout le monde a des moments difficiles. L'important c'est de ne pas abandonner !\n\nTu veux qu'on revoie tes objectifs ensemble ? Peut-être qu'on peut les adapter ?`
+        ];
+        return { text: encourage[Math.floor(Math.random() * encourage.length)] };
+    }
+    
+    // ===== QUESTIONS SUR LE PROGRÈS =====
+    
+    if (lowerMessage.includes('progrès') || lowerMessage.includes('progression') || lowerMessage.includes('comment je vais') || lowerMessage.includes('bilan')) {
+        const proteinGoal = Math.round(context.weight * 1.8);
+        const proteinPercent = Math.round((context.todayProteins / proteinGoal) * 100);
+        const calPercent = Math.round((context.todayCalories / context.goalCalories) * 100);
+        
+        return {
+            text: `📊 **Ton Bilan du Jour ${context.name}**\n\n🔥 **Calories :** ${context.todayCalories} / ${context.goalCalories} kcal (${calPercent}%)\n${calPercent < 50 ? '⚠️ Tu peux encore manger !' : calPercent < 100 ? '✅ Tu es dans la bonne zone !' : '⚡ Tu as dépassé ton objectif'}\n\n💪 **Protéines :** ${context.todayProteins}g / ${proteinGoal}g (${proteinPercent}%)\n${proteinPercent < 50 ? '🥩 Ajoute plus de protéines !' : '✅ Bon apport protéique !'}\n\n🍽️ **Repas :** ${context.todayMeals} enregistré(s)\n\n🔥 **Streak :** ${context.streak} jour(s) consécutif(s)\n\n${context.streak >= 3 ? '🏆 Tu es sur une super lancée !' : 'Continue à remplir ton journal chaque jour !'}`
+        };
+    }
+    
+    // Analyse de ce qu'il reste à manger
+    if (lowerMessage.includes('reste') || lowerMessage.includes('encore manger') || lowerMessage.includes('combien je peux')) {
+        const proteinGoal = Math.round(context.weight * 1.8);
+        const proteinLeft = proteinGoal - context.todayProteins;
+        
+        let suggestion = '';
+        if (context.caloriesLeft > 600) {
+            suggestion = `\n\n💡 **Suggestion :** Un bon repas complet avec 150g de viande + féculents + légumes !`;
+        } else if (context.caloriesLeft > 300) {
+            suggestion = `\n\n💡 **Suggestion :** Une collation protéinée ou un repas léger (salade + poulet) !`;
+        } else if (context.caloriesLeft > 0) {
+            suggestion = `\n\n💡 **Suggestion :** Un yaourt grec ou une poignée d'amandes !`;
+        } else {
+            suggestion = `\n\n⚠️ Tu as atteint ton objectif calorique. Si tu as encore faim, opte pour des légumes verts à volonté !`;
+        }
+        
+        return {
+            text: `🎯 **Ce qu'il te reste ${context.name}**\n\n🔥 **Calories :** ${Math.max(0, context.caloriesLeft)} kcal\n💪 **Protéines :** ${Math.max(0, proteinLeft)}g\n🍞 **Glucides :** ~${Math.round(context.caloriesLeft * 0.4 / 4)}g\n🥑 **Lipides :** ~${Math.round(context.caloriesLeft * 0.3 / 9)}g${suggestion}`
+        };
+    }
+    
+    // Variables pour compatibilité avec les anciennes réponses
+    let weight = context.weight;
+    let height = context.height;
+    let age = context.age;
+    let gender = context.gender;
+    let goalCalories = context.goalCalories;
+    let todayData = { totalCalories: context.todayCalories, totalProteins: context.todayProteins };
+    let caloriesLeft = context.caloriesLeft;
+    
+    // Nutrition questions - PROTÉINES (avec personnalisation)
     if (lowerMessage.includes('protéine') || lowerMessage.includes('protein')) {
         const proteinMin = (weight * 1.6).toFixed(0);
         const proteinMax = (weight * 2.2).toFixed(0);
@@ -789,7 +1030,7 @@ async function getDemoResponse(message, imageData) {
         const proteinLeft = proteinMax - proteinToday;
         
         return {
-            text: `💪 **Vos Besoins en Protéines**\n\nPour ${weight}kg :\n🎯 **Objectif : ${proteinMin}-${proteinMax}g/jour**\n📊 **Aujourd'hui : ${proteinToday}g** ${proteinLeft > 0 ? `(reste ${proteinLeft}g)` : '✅'}\n\n**Sources de qualité :**\n• 🍗 Poulet (31g/100g)\n• 🐟 Thon (26g/100g)\n• 🥚 Œufs (13g/œuf)\n• 🥜 Tofu (8g/100g)\n• 🌾 Lentilles (9g/100g)\n\n💡 **Conseil perso :** Mangez 30-40g de protéines à chaque repas (4x/jour) !`
+            text: `💪 **${context.name}, tes Besoins en Protéines**\n\nPour tes ${weight}kg :\n🎯 **Objectif : ${proteinMin}-${proteinMax}g/jour**\n📊 **Aujourd'hui : ${proteinToday}g** ${proteinLeft > 0 ? `(il te reste ${proteinLeft}g)` : '✅ Objectif atteint !'}\n\n**Mes sources préférées pour toi :**\n• 🍗 Poulet (31g/100g) - le classique !\n• 🐟 Thon (26g/100g) - rapide et pratique\n• 🥚 Œufs (13g/œuf) - pas cher et complet\n• 🥜 Tofu (8g/100g) - option végé\n\n💡 **Mon conseil ${context.name} :** Vise 30-40g de protéines par repas, 4 fois par jour !\n\nTu veux des idées de recettes riches en protéines ? 🍽️`
         };
     }
     
@@ -802,7 +1043,7 @@ async function getDemoResponse(message, imageData) {
         const deficit = Math.round(tdee * 0.8);
         
         return {
-            text: `🔥 **Vos Besoins Caloriques**\n\n📊 **Métabolisme de base :** ${Math.round(bmr)} kcal\n⚡ **Dépense totale :** ${tdee} kcal\n🎯 **Votre objectif :** ${goalCalories} kcal\n📉 **Aujourd'hui :** ${todayData.totalCalories} kcal ${caloriesLeft > 0 ? `(reste ${caloriesLeft})` : '✅'}\n\n**Pour perdre du poids :**\n• Déficit modéré : ${deficit} kcal/jour (-500 kcal)\n• Perte visée : 0.5kg/semaine\n\n💡 **Conseil :** Ne descendez jamais sous ${Math.round(bmr)} kcal !`
+            text: `🔥 **${context.name}, voici tes Besoins Caloriques**\n\n📊 **Ton métabolisme de base :** ${Math.round(bmr)} kcal\n⚡ **Ta dépense totale :** ${tdee} kcal\n🎯 **Ton objectif :** ${goalCalories} kcal\n📉 **Aujourd'hui :** ${todayData.totalCalories} kcal ${caloriesLeft > 0 ? `(reste ${caloriesLeft})` : '✅ Objectif atteint !'}\n\n**Pour perdre du poids sainement :**\n• Déficit modéré : ${deficit} kcal/jour\n• Perte visée : ~0.5kg/semaine\n\n⚠️ **Important ${context.name} :** Ne descends JAMAIS sous ${Math.round(bmr)} kcal, ton corps en a besoin pour fonctionner !\n\nBesoin d'aide pour gérer tes calories ? 😊`
         };
     }
     
@@ -812,14 +1053,14 @@ async function getDemoResponse(message, imageData) {
         const mealProtein = Math.round(weight * 0.4);
         
         return {
-            text: `🥗 **Repas Équilibré Type** (${mealCal} kcal)\n\n**Composition idéale :**\n🍗 **Protéines** (${mealProtein}g)\n• 150g poulet/poisson\n• Ou 2 œufs + 100g fromage blanc\n\n🌾 **Glucides** (${Math.round(mealCal * 0.4 / 4)}g)\n• 80g riz/pâtes (cuits)\n• Ou 100g patate douce\n\n🥑 **Lipides** (${Math.round(mealCal * 0.25 / 9)}g)\n• 1 c.à.s huile d'olive\n• Ou 30g amandes\n\n🥦 **Légumes** (à volonté)\n• Brocoli, épinards, carottes\n\n💡 **Astuce :** Préparez 4 repas similaires pour simplifier !`
+            text: `🥗 **${context.name}, voici un Repas Équilibré Type** (${mealCal} kcal)\n\n**La composition parfaite :**\n\n🍗 **Protéines** (${mealProtein}g)\n• 150g poulet ou poisson\n• Ou 2 œufs + 100g fromage blanc\n\n🌾 **Glucides** (${Math.round(mealCal * 0.4 / 4)}g)\n• 80g riz/pâtes (cuits)\n• Ou 100g patate douce\n\n🥑 **Lipides** (${Math.round(mealCal * 0.25 / 9)}g)\n• 1 c.à.s huile d'olive\n• Ou 30g amandes\n\n🥦 **Légumes** (à volonté !)\n• Brocoli, épinards, carottes...\n\n💡 **Astuce du chef :** Prépare 4 repas similaires le dimanche pour toute la semaine ! 📦\n\nTu veux que je te propose un menu complet ? 📅`
         };
     }
     
     // PRÉ-WORKOUT
     if (lowerMessage.includes('avant') && (lowerMessage.includes('entraîn') || lowerMessage.includes('sport'))) {
         return {
-            text: `⚡ **Nutrition Pré-Entraînement**\n\n**2-3h avant :**\n• 80g riz + 120g poulet\n• Ou 2 tranches pain complet + beurre de cacahuète\n\n**30-60min avant :**\n• 1 banane + 1 café\n• Ou shake: 30g whey + 1 pomme\n\n☕ **Booster :**\n• Café noir (100-200mg caféine)\n• Améliore performance de 3-5%\n\n💧 **Hydratation :**\n• 300-500ml eau 30min avant\n\n⚠️ **À éviter :**\n• Aliments gras (ralentissent digestion)\n• Repas trop copieux`
+            text: `⚡ **${context.name}, optimise ton Pré-Workout !**\n\n**2-3h avant ton entraînement :**\n• 80g riz + 120g poulet\n• Ou 2 tranches pain complet + beurre de cacahuète\n\n**30-60min avant :**\n• 1 banane + 1 café ☕\n• Ou shake: 30g whey + 1 pomme\n\n☕ **Booster naturel :**\n• Café noir (100-200mg caféine)\n• Améliore ta performance de 3-5% !\n\n💧 **Hydratation :**\n• 300-500ml eau 30min avant\n\n⚠️ **À éviter ${context.name} :**\n• Aliments gras (ralentissent digestion)\n• Repas trop copieux\n\nBon entraînement ! 💪🔥`
         };
     }
     
@@ -983,48 +1224,29 @@ async function getDemoResponse(message, imageData) {
     }
     
     // QUESTIONS GÉNÉRIQUES / AIDE
-    if (lowerMessage.includes('aide') || lowerMessage.includes('comment') || lowerMessage.includes('pourquoi') || lowerMessage.length < 20) {
-        return {
-            text: `👋 **Je suis là pour vous aider !**\n\n**Je peux répondre à :**\n\n📊 **Nutrition :**\n• Calories & macros\n• Perte de poids\n• Prise de masse\n• Timing repas\n\n🥗 **Aliments :**\n• Sources protéines\n• Glucides / lipides\n• Suppléments\n• Listes courses\n\n🏋️ **Sport :**\n• Pré/post workout\n• Récupération\n• Hydratation\n\n💡 **Conseils :**\n• Plans personnalisés\n• Mythes débunkés\n• Optimisations\n\n📸 **Upload une photo** de repas pour analyse complète !\n\n🎤 **Utilisez le micro** pour poser vos questions !\n\n💬 **Essayez les suggestions rapides** ci-dessus !`
-        };
+    if (lowerMessage.includes('aide') || lowerMessage.includes('comment') || lowerMessage.includes('pourquoi') || lowerMessage.length < 10) {
+        const helpResponses = [
+            `👋 **Hey ${context.name}, je suis là pour t'aider !**\n\n**Qu'est-ce que tu veux savoir ?**\n\n📊 **Nutrition :** Calories, macros, perte/prise de poids\n🥗 **Aliments :** Protéines, glucides, suppléments\n🏋️ **Sport :** Pré/post workout, récupération\n📸 **Analyse :** Envoie-moi une photo de ton repas !\n\n💬 **Ou utilise les suggestions rapides en haut !**\n\nQu'est-ce qui t'intéresse ? 😊`,
+            `🌟 **${context.name}, je peux t'aider avec plein de choses !**\n\nDis-moi ce que tu cherches :\n• Des conseils nutrition ? 🥗\n• Un plan pour ${context.goalType === 'perte' ? 'perdre du poids' : context.goalType === 'prise' ? 'prendre de la masse' : 'maintenir ton poids'} ?\n• Analyser un repas ? 📸\n• Des idées de recettes ? 🍽️\n\nJe suis ton coach perso ! 💪`
+        ];
+        return { text: helpResponses[Math.floor(Math.random() * helpResponses.length)] };
     }
     
-    // Default response avec suggestions personnalisées et stats du jour
-    user = JSON.parse(localStorage.getItem('currentUser'));
-    profile = JSON.parse(localStorage.getItem(`profile_${user.email}`) || '{}');
-    goal = JSON.parse(localStorage.getItem(`goal_${user.email}`) || '{}');
-    diary = JSON.parse(localStorage.getItem(`foodDiary_${user.email}`) || '{}');
-    const userName = profile.firstName || 'Champion';
-    weight = profile.currentWeight || 70;
+    // Default response - INTELLIGENT avec contexte de conversation
+    const insight = generateProactiveInsight(context);
     
-    // Stats du jour
-    today = new Date().toISOString().split('T')[0];
-    todayData = diary[today] || { totalCalories: 0, totalProteins: 0 };
-    const goalCal = goal.calories || 2000;
-    caloriesLeft = Math.max(0, goalCal - todayData.totalCalories);
-    const proteinGoal = Math.round(weight * 1.8);
-    const proteinLeft = Math.max(0, proteinGoal - (todayData.totalProteins || 0));
-    const percentCal = Math.round((todayData.totalCalories / goalCal) * 100);
-    const percentProt = Math.round(((todayData.totalProteins || 0) / proteinGoal) * 100);
+    // Analyser le dernier sujet discuté pour faire une transition
+    const lastTopic = conversationContext.length > 0 ? conversationContext[conversationContext.length - 1].topic : 'general';
     
-    const suggestions = [
-        '📸 Photo de repas',
-        '💪 "Protéines"',
-        '🔥 "Déficit calorique"',
-        '🥤 "Smoothie"',
-        '📅 "Plan repas"',
-        '🛒 "Aliments"',
-        '💊 "Suppléments"',
-        '🏋️ "Workout"',
-        '😴 "Sommeil"',
-        '⏰ "Timing"'
+    const defaultResponses = [
+        `🤔 Hmm ${context.name}, je n'ai pas bien compris...\n\n${insight ? `📊 **Au fait :** ${insight}\n\n` : ''}**Tu peux me demander :**\n• "Combien de protéines j'ai besoin ?" 💪\n• "Que manger avant le sport ?" ⚡\n• "Comment perdre du poids ?" 🔥\n• Ou envoie-moi une photo de repas ! 📸\n\nReformule ta question ? 😊`,
+        
+        `${context.name}, je veux bien t'aider mais reformule un peu ! 😅\n\n${insight ? `💡 **Rappel :** ${insight}\n\n` : ''}**Essaie par exemple :**\n• "Besoin protéines"\n• "Calories restantes"\n• "Idées repas"\n• "Mon bilan du jour"\n\n🎤 Tu peux aussi utiliser le micro !`,
+        
+        `Oops, pas sûr de comprendre ${context.name} ! 🤷\n\n${context.todayMeals === 0 ? '⏰ D\'ailleurs, tu n\'as pas encore mangé aujourd\'hui !' : `📊 Tu as déjà ${context.todayMeals} repas aujourd'hui, ${context.caloriesLeft > 0 ? `il te reste ${context.caloriesLeft} kcal.` : 'objectif atteint !'}`}\n\n**Clique sur une suggestion rapide** ou reformule ta question ! 😊`
     ];
     
-    const randomSuggestions = suggestions.sort(() => 0.5 - Math.random()).slice(0, 3);
-    
-    return {
-        text: `🤔 **${userName}, reformule ta question !**\n\n📊 **AUJOURD'HUI :**\n🎯 ${goal.type || 'Maintien'}\n🔥 ${todayData.totalCalories}/${goalCal} kcal (${percentCal}%) ${caloriesLeft > 0 ? `\n   ➜ Reste ${caloriesLeft} kcal` : '✅'}\n💪 ${todayData.totalProteins || 0}/${proteinGoal}g protéines (${percentProt}%) ${proteinLeft > 0 ? `\n   ➜ Reste ${proteinLeft}g` : '✅'}\n\n---\n\n💡 **ESSAIE :**\n${randomSuggestions.map(s => `• ${s}`).join('\n')}\n\n---\n\n✨ **MES SUPER-POUVOIRS :**\n\n🍽️ **Nutrition Pro**\n• Plans ${Math.round(goalCal)} kcal personnalisés\n• Recettes & meal prep rapide\n• Calculs macros précis\n• Mythes nutrition détruits\n\n🏋️ **Coach Sportif**\n• Pré/post-workout optimal\n• Suppléments qui marchent\n• Récupération maximale\n• ${Math.round(weight * 35)}ml eau/jour pour toi\n\n💪 **Motivation 24/7**\n• Support quotidien\n• Stratégies mentales\n• Suivi progression\n• Toujours disponible\n\n📸 **IA Analyse**\n• Photo → Nutrition\n• 162+ aliments reconnus\n• Ajout auto journal\n\n🎤 **Utilise le micro** ou clique sur une suggestion !`
-    };
+    return { text: defaultResponses[Math.floor(Math.random() * defaultResponses.length)] };
 }
 
 // Add message to UI

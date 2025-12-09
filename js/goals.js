@@ -93,64 +93,381 @@ function calculateTDEE(bmr, activityLevel) {
     return bmr * parseFloat(activityLevel);
 }
 
-// Validate goal feasibility
-function validateGoalFeasibility(currentWeight, targetWeight, durationDays) {
-    const weightChange = Math.abs(targetWeight - currentWeight);
-    const weeklyChange = (weightChange / durationDays) * 7;
+// ===== CONSTANTES SCIENTIFIQUES =====
+const SCIENCE = {
+    // 1 kg de graisse = 7700 kcal (consensus scientifique)
+    KCAL_PER_KG_FAT: 7700,
+    
+    // Perte de poids saine : 0.5-1% du poids corporel par semaine (ACSM guidelines)
+    MAX_WEEKLY_LOSS_PERCENT: 1.0,    // Maximum absolu
+    SAFE_WEEKLY_LOSS_PERCENT: 0.75,  // Recommandé
+    MIN_WEEKLY_LOSS_PERCENT: 0.5,    // Minimum efficace
+    
+    // Prise de masse : 0.25-0.5% du poids par semaine (pour minimiser gain de gras)
+    MAX_WEEKLY_GAIN_PERCENT: 0.5,
+    SAFE_WEEKLY_GAIN_PERCENT: 0.25,
+    
+    // Déficit calorique (NIH, NHLBI guidelines)
+    MAX_DAILY_DEFICIT: 1000,         // Maximum 1000 kcal/jour de déficit
+    MIN_DAILY_DEFICIT: 250,          // Minimum pour voir des résultats
+    MAX_DEFICIT_PERCENT: 25,         // Maximum 25% sous TDEE
+    
+    // Calories minimales (pour éviter mode famine et perte musculaire)
+    MIN_CALORIES_MALE: 1500,         // Minimum pour hommes
+    MIN_CALORIES_FEMALE: 1200,       // Minimum pour femmes
+    
+    // Surplus calorique pour prise de masse
+    MAX_DAILY_SURPLUS: 500,          // Maximum 500 kcal/jour surplus
+    SAFE_DAILY_SURPLUS: 300,         // Recommandé pour limiter gain de gras
+    
+    // Limites biologiques
+    MAX_REALISTIC_WEEKLY_LOSS: 1.5,  // Même pour obèses, pas plus
+    MIN_HEALTHY_BMI: 18.5,
+    MAX_HEALTHY_BMI: 25
+};
+
+// Estimer le pourcentage de graisse corporelle (formule US Navy simplifiée)
+function estimateBodyFatPercent(weight, height, age, gender) {
+    // Formule approximative basée sur IMC (moins précise mais sans mesures)
+    const heightM = height / 100;
+    const bmi = weight / (heightM * heightM);
+    
+    // Formule Deurenberg (1991) - estimation via IMC
+    if (gender === 'male') {
+        return (1.20 * bmi) + (0.23 * age) - 16.2;
+    } else {
+        return (1.20 * bmi) + (0.23 * age) - 5.4;
+    }
+}
+
+// Calculer la masse maigre et grasse
+function calculateBodyComposition(weight, bodyFatPercent) {
+    const fatMass = weight * (bodyFatPercent / 100);
+    const leanMass = weight - fatMass;
+    return { fatMass, leanMass, bodyFatPercent };
+}
+
+// Validate goal with SCIENTIFIC calculations
+function validateGoalFeasibility(currentWeight, targetWeight, durationDays, gender = 'male', age = 30, height = 170, activityLevel = 1.55) {
+    const weightChange = targetWeight - currentWeight;
+    const absWeightChange = Math.abs(weightChange);
+    const durationWeeks = durationDays / 7;
+    const weeklyChange = absWeightChange / durationWeeks;
+    
+    console.log('=== VALIDATION SCIENTIFIQUE ===');
+    console.log('Poids actuel:', currentWeight, 'kg');
+    console.log('Poids cible:', targetWeight, 'kg');
+    console.log('Changement:', weightChange, 'kg en', durationDays, 'jours');
+    console.log('Changement hebdo:', weeklyChange.toFixed(2), 'kg/semaine');
     
     const messages = [];
     let isValid = true;
     let severity = 'success';
+    let recommendedDuration = null;
+    let safeCalories = null;
     
-    // Règles de validation
-    if (weightChange === 0) {
+    // Calculs de base
+    const bmr = calculateBMR(currentWeight, height, age, gender);
+    const tdee = calculateTDEE(bmr, activityLevel);
+    const bodyFatPercent = estimateBodyFatPercent(currentWeight, height, age, gender);
+    const { fatMass, leanMass } = calculateBodyComposition(currentWeight, bodyFatPercent);
+    
+    // IMC cible
+    const heightM = height / 100;
+    const targetBMI = targetWeight / (heightM * heightM);
+    const currentBMI = currentWeight / (heightM * heightM);
+    
+    // ===== OBJECTIF DE MAINTIEN =====
+    if (absWeightChange === 0 || absWeightChange < 0.5) {
         messages.push({
             type: 'info',
-            text: 'Aucun changement de poids souhaité. Objectif de maintien.'
+            text: '🎯 Objectif de maintien du poids actuel.'
         });
-    } else if (targetWeight < currentWeight) {
-        // Perte de poids
-        if (weeklyChange > 1) {
-            isValid = false;
-            severity = 'danger';
-            messages.push({
-                type: 'danger',
-                text: `⚠️ OBJECTIF DANGEREUX ! Vous voulez perdre ${weeklyChange.toFixed(1)} kg/semaine. La perte recommandée est de 0.5-1 kg/semaine.`
-            });
-            messages.push({
-                type: 'warning',
-                text: `Durée minimale recommandée : ${Math.ceil((weightChange / 1) * 7)} jours pour une perte saine.`
-            });
-        } else if (weeklyChange > 0.8) {
-            severity = 'warning';
-            messages.push({
-                type: 'warning',
-                text: `Objectif ambitieux mais réalisable : ${weeklyChange.toFixed(1)} kg/semaine.`
-            });
-        } else {
-            messages.push({
-                type: 'success',
-                text: `✓ Objectif sain et réaliste : ${weeklyChange.toFixed(1)} kg/semaine.`
-            });
-        }
-    } else {
-        // Prise de poids
-        if (weeklyChange > 0.5) {
-            isValid = false;
-            severity = 'danger';
-            messages.push({
-                type: 'danger',
-                text: `⚠️ OBJECTIF TROP RAPIDE ! Vous voulez prendre ${weeklyChange.toFixed(1)} kg/semaine. La prise recommandée est de 0.25-0.5 kg/semaine.`
-            });
-        } else {
-            messages.push({
-                type: 'success',
-                text: `✓ Objectif réaliste pour une prise de masse : ${weeklyChange.toFixed(1)} kg/semaine.`
-            });
-        }
+        messages.push({
+            type: 'info',
+            text: `📊 Vos besoins quotidiens : ${Math.round(tdee)} kcal/jour`
+        });
+        return { isValid: true, severity: 'info', messages, weeklyChange: 0, safeCalories: Math.round(tdee) };
     }
     
-    return { isValid, severity, messages, weeklyChange };
+    // ===== PERTE DE POIDS =====
+    if (weightChange < 0) {
+        // Calculer le max sûr basé sur le % du poids corporel
+        const maxWeeklyLoss = (currentWeight * SCIENCE.MAX_WEEKLY_LOSS_PERCENT) / 100;
+        const safeWeeklyLoss = (currentWeight * SCIENCE.SAFE_WEEKLY_LOSS_PERCENT) / 100;
+        
+        // Calculer le déficit calorique demandé
+        const totalCaloriesNeeded = absWeightChange * SCIENCE.KCAL_PER_KG_FAT;
+        const dailyDeficitNeeded = totalCaloriesNeeded / durationDays;
+        const proposedCalories = tdee - dailyDeficitNeeded;
+        
+        // Minimum calories basé sur le genre
+        const minCalories = gender === 'male' ? SCIENCE.MIN_CALORIES_MALE : SCIENCE.MIN_CALORIES_FEMALE;
+        
+        // Calculer le déficit maximum possible (TDEE - calories minimum)
+        const maxPossibleDeficit = tdee - minCalories;
+        const maxPossibleWeeklyLoss = (maxPossibleDeficit * 7) / SCIENCE.KCAL_PER_KG_FAT;
+        
+        console.log('TDEE:', Math.round(tdee), 'kcal/jour');
+        console.log('Déficit demandé:', Math.round(dailyDeficitNeeded), 'kcal/jour');
+        console.log('Déficit max possible:', Math.round(maxPossibleDeficit), 'kcal/jour');
+        console.log('Perte max possible physiquement:', maxPossibleWeeklyLoss.toFixed(2), 'kg/semaine');
+        console.log('Max selon % poids:', maxWeeklyLoss.toFixed(2), 'kg/semaine');
+        
+        // 🚨 VÉRIFICATION 0: Impossible physiquement (déficit > TDEE - minimum)
+        if (dailyDeficitNeeded > maxPossibleDeficit) {
+            isValid = false;
+            severity = 'danger';
+            
+            // Calculer la durée minimale basée sur le déficit possible
+            const minDaysNeeded = Math.ceil(totalCaloriesNeeded / maxPossibleDeficit);
+            recommendedDuration = minDaysNeeded;
+            
+            messages.push({
+                type: 'danger',
+                text: `🚫 PHYSIQUEMENT IMPOSSIBLE !`
+            });
+            messages.push({
+                type: 'danger',
+                text: `Déficit nécessaire : ${Math.round(dailyDeficitNeeded)} kcal/jour`
+            });
+            messages.push({
+                type: 'danger',
+                text: `Votre TDEE (activité ${activityLevel}) : ${Math.round(tdee)} kcal/jour`
+            });
+            messages.push({
+                type: 'warning',
+                text: `Déficit max possible : ${Math.round(maxPossibleDeficit)} kcal/jour (TDEE - ${minCalories} kcal minimum)`
+            });
+            messages.push({
+                type: 'info',
+                text: `⏱️ Durée minimum : ${minDaysNeeded} jours (${Math.ceil(minDaysNeeded/7)} semaines)`
+            });
+        }
+        // 🚨 VÉRIFICATION 1: Perte trop rapide (% du poids)
+        else if (weeklyChange > maxWeeklyLoss || weeklyChange > SCIENCE.MAX_REALISTIC_WEEKLY_LOSS) {
+            isValid = false;
+            severity = 'danger';
+            
+            // Calculer la durée réaliste
+            recommendedDuration = Math.ceil((absWeightChange / safeWeeklyLoss) * 7);
+            
+            messages.push({
+                type: 'danger',
+                text: `🚫 OBJECTIF IMPOSSIBLE ET DANGEREUX !`
+            });
+            messages.push({
+                type: 'danger',
+                text: `Vous demandez ${weeklyChange.toFixed(2)} kg/semaine (${((weeklyChange/currentWeight)*100).toFixed(1)}% de votre poids).`
+            });
+            messages.push({
+                type: 'warning',
+                text: `📚 Science : Max sûr = ${maxWeeklyLoss.toFixed(2)} kg/semaine (1% du poids) pour préserver vos muscles.`
+            });
+            messages.push({
+                type: 'info',
+                text: `⏱️ Durée minimale recommandée : ${recommendedDuration} jours (${Math.ceil(recommendedDuration/7)} semaines)`
+            });
+        }
+        // 🚨 VÉRIFICATION 2: Déficit calorique trop important
+        else if (dailyDeficitNeeded > SCIENCE.MAX_DAILY_DEFICIT) {
+            isValid = false;
+            severity = 'danger';
+            
+            const safeDuration = Math.ceil(totalCaloriesNeeded / SCIENCE.MAX_DAILY_DEFICIT);
+            recommendedDuration = safeDuration;
+            
+            messages.push({
+                type: 'danger',
+                text: `🚫 DÉFICIT CALORIQUE DANGEREUX !`
+            });
+            messages.push({
+                type: 'danger',
+                text: `Déficit demandé : ${Math.round(dailyDeficitNeeded)} kcal/jour (Max sûr : ${SCIENCE.MAX_DAILY_DEFICIT} kcal/jour)`
+            });
+            messages.push({
+                type: 'warning',
+                text: `Un déficit > 1000 kcal/jour cause : perte musculaire, fatigue, carences nutritionnelles.`
+            });
+            messages.push({
+                type: 'info',
+                text: `⏱️ Durée minimale : ${safeDuration} jours pour un déficit de 1000 kcal/jour`
+            });
+        }
+        // 🚨 VÉRIFICATION 3: Calories sous le minimum vital
+        else if (proposedCalories < minCalories) {
+            isValid = false;
+            severity = 'danger';
+            
+            const safeDeficit = tdee - minCalories;
+            const safeDuration = Math.ceil(totalCaloriesNeeded / safeDeficit);
+            recommendedDuration = safeDuration;
+            
+            messages.push({
+                type: 'danger',
+                text: `🚫 CALORIES INSUFFISANTES !`
+            });
+            messages.push({
+                type: 'danger',
+                text: `Calories calculées : ${Math.round(proposedCalories)} kcal/jour (Minimum vital : ${minCalories} kcal/jour)`
+            });
+            messages.push({
+                type: 'warning',
+                text: `Manger moins de ${minCalories} kcal/jour = Mode famine, ralentissement du métabolisme.`
+            });
+            messages.push({
+                type: 'info',
+                text: `⏱️ Durée minimale : ${safeDuration} jours à ${minCalories} kcal/jour`
+            });
+        }
+        // 🚨 VÉRIFICATION 4: Déficit > 25% du TDEE
+        else if ((dailyDeficitNeeded / tdee) * 100 > SCIENCE.MAX_DEFICIT_PERCENT) {
+            severity = 'warning';
+            
+            const safeDeficit = tdee * 0.20; // 20% déficit recommandé
+            const safeDuration = Math.ceil(totalCaloriesNeeded / safeDeficit);
+            
+            messages.push({
+                type: 'warning',
+                text: `⚠️ OBJECTIF AGRESSIF`
+            });
+            messages.push({
+                type: 'warning',
+                text: `Déficit de ${((dailyDeficitNeeded/tdee)*100).toFixed(0)}% (recommandé : max 20-25%)`
+            });
+            messages.push({
+                type: 'info',
+                text: `Conseillé : ${safeDuration} jours pour un déficit de 20%`
+            });
+            messages.push({
+                type: 'success',
+                text: `✓ Techniquement possible, mais risque de fatigue et faim.`
+            });
+        }
+        // ✅ Objectif réaliste
+        else {
+            messages.push({
+                type: 'success',
+                text: `✅ OBJECTIF RÉALISTE ET SAIN`
+            });
+            messages.push({
+                type: 'success',
+                text: `Perte de ${weeklyChange.toFixed(2)} kg/semaine (${((weeklyChange/currentWeight)*100).toFixed(1)}% de votre poids)`
+            });
+            messages.push({
+                type: 'info',
+                text: `📊 Déficit journalier : ${Math.round(dailyDeficitNeeded)} kcal (${((dailyDeficitNeeded/tdee)*100).toFixed(0)}% sous TDEE)`
+            });
+        }
+        
+        // Vérifier IMC cible
+        if (targetBMI < SCIENCE.MIN_HEALTHY_BMI) {
+            isValid = false;
+            severity = 'danger';
+            messages.push({
+                type: 'danger',
+                text: `🚫 IMC cible (${targetBMI.toFixed(1)}) = insuffisance pondérale ! Min sain : ${SCIENCE.MIN_HEALTHY_BMI}`
+            });
+        }
+        
+        // Calculer calories sûres
+        safeCalories = Math.max(minCalories, Math.round(tdee - Math.min(dailyDeficitNeeded, SCIENCE.MAX_DAILY_DEFICIT)));
+    }
+    // ===== PRISE DE POIDS =====
+    else {
+        // Calculer le max sûr basé sur le % du poids corporel
+        const maxWeeklyGain = (currentWeight * SCIENCE.MAX_WEEKLY_GAIN_PERCENT) / 100;
+        const safeWeeklyGain = (currentWeight * SCIENCE.SAFE_WEEKLY_GAIN_PERCENT) / 100;
+        
+        // Calculer le surplus calorique demandé
+        const totalCaloriesNeeded = absWeightChange * SCIENCE.KCAL_PER_KG_FAT;
+        const dailySurplusNeeded = totalCaloriesNeeded / durationDays;
+        const proposedCalories = tdee + dailySurplusNeeded;
+        
+        // 🚨 Prise trop rapide
+        if (weeklyChange > maxWeeklyGain) {
+            isValid = false;
+            severity = 'danger';
+            
+            recommendedDuration = Math.ceil((absWeightChange / safeWeeklyGain) * 7);
+            
+            messages.push({
+                type: 'danger',
+                text: `🚫 PRISE DE POIDS TROP RAPIDE !`
+            });
+            messages.push({
+                type: 'danger',
+                text: `${weeklyChange.toFixed(2)} kg/semaine = principalement du gras, pas du muscle.`
+            });
+            messages.push({
+                type: 'warning',
+                text: `📚 Science : Max ${maxWeeklyGain.toFixed(2)} kg/semaine pour maximiser le muscle.`
+            });
+            messages.push({
+                type: 'info',
+                text: `⏱️ Durée recommandée : ${recommendedDuration} jours (${Math.ceil(recommendedDuration/7)} semaines)`
+            });
+        }
+        // Surplus calorique trop important
+        else if (dailySurplusNeeded > SCIENCE.MAX_DAILY_SURPLUS) {
+            severity = 'warning';
+            
+            messages.push({
+                type: 'warning',
+                text: `⚠️ SURPLUS CALORIQUE ÉLEVÉ`
+            });
+            messages.push({
+                type: 'warning',
+                text: `Surplus de ${Math.round(dailySurplusNeeded)} kcal/jour (recommandé : ${SCIENCE.SAFE_DAILY_SURPLUS}-${SCIENCE.MAX_DAILY_SURPLUS} kcal)`
+            });
+            messages.push({
+                type: 'info',
+                text: `Un surplus > 500 kcal favorise le gain de gras plutôt que le muscle.`
+            });
+        }
+        // ✅ Objectif réaliste
+        else {
+            messages.push({
+                type: 'success',
+                text: `✅ OBJECTIF RÉALISTE POUR PRISE DE MASSE`
+            });
+            messages.push({
+                type: 'success',
+                text: `Gain de ${weeklyChange.toFixed(2)} kg/semaine (majoritairement du muscle avec entraînement)`
+            });
+            messages.push({
+                type: 'info',
+                text: `📊 Surplus journalier : +${Math.round(dailySurplusNeeded)} kcal`
+            });
+        }
+        
+        // Vérifier IMC cible
+        if (targetBMI > SCIENCE.MAX_HEALTHY_BMI) {
+            messages.push({
+                type: 'warning',
+                text: `⚠️ IMC cible (${targetBMI.toFixed(1)}) = surpoids. Consultez un professionnel.`
+            });
+        }
+        
+        safeCalories = Math.round(tdee + Math.min(dailySurplusNeeded, SCIENCE.MAX_DAILY_SURPLUS));
+    }
+    
+    // Ajouter info sur la composition corporelle
+    messages.push({
+        type: 'info',
+        text: `💡 Estimation graisse corporelle : ${bodyFatPercent.toFixed(1)}% (${fatMass.toFixed(1)} kg de gras, ${leanMass.toFixed(1)} kg de masse maigre)`
+    });
+    
+    return { 
+        isValid, 
+        severity, 
+        messages, 
+        weeklyChange, 
+        recommendedDuration,
+        safeCalories,
+        bodyComposition: { bodyFatPercent, fatMass, leanMass },
+        calculations: { bmr: Math.round(bmr), tdee: Math.round(tdee), currentBMI, targetBMI }
+    };
 }
 
 // Calculate and validate goal
@@ -180,47 +497,74 @@ function calculateAndValidateGoal(e) {
     
     console.log('All fields validated, calculating...');
     
-    // Validate goal feasibility
-    const validation = validateGoalFeasibility(currentWeight, targetWeight, targetDuration);
+    // Validate goal feasibility with ALL parameters for scientific calculation
+    const validation = validateGoalFeasibility(currentWeight, targetWeight, targetDuration, gender, age, height, parseFloat(activityLevel));
     console.log('Validation result:', validation);
     
-    // Display validation message
+    // Display validation message with enhanced formatting
     const validationDiv = document.getElementById('validationMessage');
     if (validationDiv) {
         validationDiv.className = `alert alert-${validation.severity}`;
-        validationDiv.innerHTML = validation.messages.map(msg => 
-            `<div><strong>${msg.text}</strong></div>`
-        ).join('');
+        validationDiv.innerHTML = `
+            <div class="mb-2"><strong>📊 Analyse scientifique de votre objectif</strong></div>
+            ${validation.messages.map(msg => 
+                `<div class="${msg.type === 'danger' ? 'text-danger fw-bold' : msg.type === 'warning' ? 'text-warning' : msg.type === 'success' ? 'text-success' : ''}">${msg.text}</div>`
+            ).join('')}
+            ${validation.recommendedDuration ? `<hr><div class="mt-2"><strong>💡 Conseil : </strong>Ajustez la durée à ${validation.recommendedDuration} jours minimum.</div>` : ''}
+        `;
         validationDiv.classList.remove('d-none');
     }
     
     if (!validation.isValid) {
         console.warn('Goal not valid, stopping here');
+        showToast('⚠️ Objectif rejeté pour votre sécurité. Consultez les recommandations.', 'warning');
         return; // Ne pas sauvegarder si l'objectif est dangereux
     }
     
     console.log('Goal is valid, calculating nutritional needs...');
     
-    // Calculate nutritional needs
-    const bmr = calculateBMR(currentWeight, height, age, gender);
-    const tdee = calculateTDEE(bmr, activityLevel);
+    // Use scientific calculations from validation
+    const bmr = validation.calculations.bmr;
+    const tdee = validation.calculations.tdee;
     
-    // Calculate calorie adjustment for goal
-    const weightChange = targetWeight - currentWeight;
-    const totalCalorieChange = weightChange * 7700; // 1 kg ≈ 7700 kcal
-    const dailyCalorieAdjustment = totalCalorieChange / targetDuration;
-    const targetCalories = Math.round(tdee + dailyCalorieAdjustment);
+    // Use safe calories calculated by the validation function
+    // This ensures we never go below minimum or exceed safe limits
+    const targetCalories = validation.safeCalories || tdee;
     
-    console.log('Calculations:', { bmr, tdee, targetCalories });
+    console.log('Calculations:', { bmr, tdee, targetCalories, safeCalories: validation.safeCalories });
     
-    // Calculate macros (example distribution)
-    const proteinCalories = targetCalories * 0.30;
-    const carbsCalories = targetCalories * 0.40;
-    const fatsCalories = targetCalories * 0.30;
+    // Calculate macros based on goal type
+    let proteinPercent, carbsPercent, fatsPercent;
+    
+    if (targetWeight < currentWeight) {
+        // Perte de poids : plus de protéines pour préserver le muscle
+        proteinPercent = 0.35;
+        carbsPercent = 0.35;
+        fatsPercent = 0.30;
+    } else if (targetWeight > currentWeight) {
+        // Prise de masse : plus de glucides pour l'énergie et la récupération
+        proteinPercent = 0.30;
+        carbsPercent = 0.45;
+        fatsPercent = 0.25;
+    } else {
+        // Maintien : équilibré
+        proteinPercent = 0.30;
+        carbsPercent = 0.40;
+        fatsPercent = 0.30;
+    }
+    
+    const proteinCalories = targetCalories * proteinPercent;
+    const carbsCalories = targetCalories * carbsPercent;
+    const fatsCalories = targetCalories * fatsPercent;
     
     const proteinGrams = Math.round(proteinCalories / 4);
     const carbsGrams = Math.round(carbsCalories / 4);
     const fatsGrams = Math.round(fatsCalories / 9);
+    
+    // Vérification protéines minimum (1.6-2.2g/kg pour préserver le muscle)
+    const minProteinPerKg = targetWeight < currentWeight ? 2.0 : 1.6;
+    const minProteinGrams = Math.round(currentWeight * minProteinPerKg);
+    const finalProteinGrams = Math.max(proteinGrams, minProteinGrams);
     
     // Save profile
     userProfile = { gender, age, height, currentWeight, activityLevel };
@@ -242,11 +586,17 @@ function calculateAndValidateGoal(e) {
         tdee: Math.round(tdee),
         targetCalories,
         macros: {
-            protein: { grams: proteinGrams, calories: Math.round(proteinCalories) },
+            protein: { grams: finalProteinGrams, calories: Math.round(finalProteinGrams * 4) },
             carbs: { grams: carbsGrams, calories: Math.round(carbsCalories) },
             fats: { grams: fatsGrams, calories: Math.round(fatsCalories) }
         },
         weeklyChange: validation.weeklyChange,
+        bodyComposition: validation.bodyComposition,
+        scientificValidation: {
+            maxWeeklyLossPercent: SCIENCE.MAX_WEEKLY_LOSS_PERCENT,
+            minCalories: gender === 'male' ? SCIENCE.MIN_CALORIES_MALE : SCIENCE.MIN_CALORIES_FEMALE,
+            validatedAt: new Date().toISOString()
+        },
         created: Date.now()
     };
     
