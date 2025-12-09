@@ -1,6 +1,6 @@
 // ===== Service Worker for Offline Support =====
 
-const CACHE_NAME = 'nutrisport-v2';
+const CACHE_NAME = 'nutrisport-v3';
 const urlsToCache = [
   './index.html',
   './html/index.html',
@@ -11,6 +11,7 @@ const urlsToCache = [
   './html/login.html',
   './html/signup.html',
   './html/dashboard.html',
+  './html/meal-plan.html',
   './css/styles.css',
   './js/main.js',
   './js/goals.js',
@@ -28,7 +29,10 @@ const urlsToCache = [
   './js/notifications.js',
   './js/image-analyzer.js',
   './js/ml-recognizer.js',
-  './js/pwa.js'
+  './js/pwa.js',
+  './js/barcode-scanner.js',
+  './js/meal-planner.js',
+  './js/shopping-list.js'
 ];
 
 // Install event - with fallback for failed requests

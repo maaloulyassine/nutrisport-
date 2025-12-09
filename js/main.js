@@ -24,7 +24,7 @@ function checkLogin() {
         updateNavigation(true, user.fullName);
     } else {
         // Redirect to login if not logged in and trying to access protected pages
-        const protectedPages = ['goals.html', 'food-diary.html', 'settings.html', 'dashboard.html', 'chatbot.html'];
+        const protectedPages = ['goals.html', 'food-diary.html', 'settings.html', 'dashboard.html', 'chatbot.html', 'meal-plan.html'];
         if (protectedPages.includes(currentPage)) {
             window.location.href = 'login.html';
             return;
@@ -128,6 +128,11 @@ function updateNavigation(isLoggedIn, userName = '') {
             <li class="nav-item">
                 <a class="nav-link ${currentPage === 'food-diary.html' ? 'active' : ''}" href="food-diary.html">
                     <i class="fas fa-utensils"></i> Journal
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link ${currentPage === 'meal-plan.html' ? 'active' : ''}" href="meal-plan.html">
+                    <i class="fas fa-calendar-week"></i> Plan Repas
                 </a>
             </li>
             <li class="nav-item">

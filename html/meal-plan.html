@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plan de Repas - NutriSport</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../css/styles.css">
+    <style>
+        .meal-card {
+            transition: transform 0.2s;
+        }
+        .meal-card:hover {
+            transform: translateY(-2px);
+        }
+        .day-column {
+            min-height: 200px;
+        }
+        .meal-type-icon {
+            width: 30px;
+            height: 30px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+        .goal-card {
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .goal-card:hover, .goal-card.active {
+            transform: scale(1.02);
+            border-color: #0d6efd !important;
+        }
+        .goal-card.active {
+            background-color: #e7f1ff;
+        }
+        .ingredient-tag {
+            font-size: 0.75rem;
+            background: #f0f0f0;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin: 2px;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <i class="fas fa-dumbbell"></i> NutriSport
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto" id="mainNav">
+                    <!-- Navigation items will be loaded dynamically -->
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <section class="py-5">
+        <div class="container">
+            <div class="text-center mb-5">
+                <i class="fas fa-calendar-week fa-3x text-primary"></i>
+                <h1 class="mt-3">Plan de Repas Hebdomadaire</h1>
+                <p class="lead text-muted">Planifiez vos repas selon votre objectif</p>
+            </div>
+
+            <!-- Goal Selection -->
+            <div class="row g-4 mb-5">
+                <div class="col-md-4">
+                    <div class="card goal-card h-100" data-goal="perte-poids" onclick="selectGoal('perte-poids')">
+                        <div class="card-body text-center">
+                            <i class="fas fa-fire fa-3x text-danger mb-3"></i>
+                            <h5>Perte de Poids</h5>
+                            <p class="text-muted small">Déficit calorique, riche en protéines</p>
+                            <div class="mt-3">
+                                <span class="badge bg-danger">35% Protéines</span>
+                                <span class="badge bg-warning">35% Glucides</span>
+                                <span class="badge bg-info">30% Lipides</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card goal-card h-100" data-goal="prise-masse" onclick="selectGoal('prise-masse')">
+                        <div class="card-body text-center">
+                            <i class="fas fa-dumbbell fa-3x text-success mb-3"></i>
+                            <h5>Prise de Masse</h5>
+                            <p class="text-muted small">Surplus calorique, glucides élevés</p>
+                            <div class="mt-3">
+                                <span class="badge bg-danger">30% Protéines</span>
+                                <span class="badge bg-warning">45% Glucides</span>
+                                <span class="badge bg-info">25% Lipides</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card goal-card h-100" data-goal="maintien" onclick="selectGoal('maintien')">
+                        <div class="card-body text-center">
+                            <i class="fas fa-balance-scale fa-3x text-primary mb-3"></i>
+                            <h5>Maintien</h5>
+                            <p class="text-muted small">Équilibre des macronutriments</p>
+                            <div class="mt-3">
+                                <span class="badge bg-danger">30% Protéines</span>
+                                <span class="badge bg-warning">40% Glucides</span>
+                                <span class="badge bg-info">30% Lipides</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Calorie Target -->
+            <div class="row justify-content-center mb-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-6">
+                                    <label class="form-label">
+                                        <i class="fas fa-fire-alt text-warning"></i> Objectif Calorique Quotidien
+                                    </label>
+                                    <input type="number" class="form-control" id="targetCalories" value="2000" min="1200" max="5000">
+                                </div>
+                                <div class="col-md-6 text-center mt-3 mt-md-0">
+                                    <button class="btn btn-primary btn-lg" onclick="generateWeekPlan()">
+                                        <i class="fas fa-magic"></i> Générer le Plan
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Week Plan Display -->
+            <div id="weekPlanContainer" class="d-none">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3><i class="fas fa-calendar-alt text-primary"></i> Votre Plan de la Semaine</h3>
+                    <div>
+                        <button class="btn btn-outline-success me-2" onclick="generateShoppingListFromPlan()">
+                            <i class="fas fa-shopping-cart"></i> Générer Liste de Courses
+                        </button>
+                        <button class="btn btn-outline-primary me-2" onclick="exportMealPlan()">
+                            <i class="fas fa-download"></i> Exporter
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="generateWeekPlan()">
+                            <i class="fas fa-sync"></i> Regénérer
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Summary Stats -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body text-center">
+                                <h3 id="avgCalories">0</h3>
+                                <small>Calories / jour</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-danger text-white">
+                            <div class="card-body text-center">
+                                <h3 id="avgProteins">0g</h3>
+                                <small>Protéines / jour</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-dark">
+                            <div class="card-body text-center">
+                                <h3 id="avgCarbs">0g</h3>
+                                <small>Glucides / jour</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-info text-white">
+                            <div class="card-body text-center">
+                                <h3 id="avgFats">0g</h3>
+                                <small>Lipides / jour</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Days Tabs -->
+                <ul class="nav nav-tabs" id="daysTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#lundi">Lundi</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#mardi">Mardi</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#mercredi">Mercredi</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#jeudi">Jeudi</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#vendredi">Vendredi</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#samedi">Samedi</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#dimanche">Dimanche</button>
+                    </li>
+                </ul>
+                <div class="tab-content" id="daysContent">
+                    <!-- Content will be generated dynamically -->
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="text-center py-5">
+                <i class="fas fa-utensils fa-5x text-muted mb-4 opacity-25"></i>
+                <h4 class="text-muted">Sélectionnez votre objectif et générez votre plan</h4>
+                <p class="text-muted">Cliquez sur un objectif ci-dessus, puis sur "Générer le Plan"</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white text-center py-4 mt-5">
+        <div class="container">
+            <p class="mb-0">&copy; 2025 NutriSport. Tous droits réservés.</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/main.js"></script>
+    <script src="../js/meal-planner.js"></script>
+    <script src="../js/shopping-list.js"></script>
+    <script>
+        let currentGoal = null;
+        let currentPlan = null;
+
+        function selectGoal(goal) {
+            currentGoal = goal;
+            // Update UI
+            document.querySelectorAll('.goal-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            document.querySelector(`[data-goal="${goal}"]`).classList.add('active');
+        }
+
+        function generateWeekPlan() {
+            if (!currentGoal) {
+                alert('Veuillez d\'abord sélectionner un objectif !');
+                return;
+            }
+
+            const targetCalories = parseInt(document.getElementById('targetCalories').value) || 2000;
+            
+            // Generate the plan
+            currentPlan = generateMealPlan(currentGoal, targetCalories);
+            
+            // Show the plan
+            displayWeekPlan(currentPlan);
+            
+            // Show container, hide empty state
+            document.getElementById('weekPlanContainer').classList.remove('d-none');
+            document.getElementById('emptyState').classList.add('d-none');
+        }
+
+        function displayWeekPlan(plan) {
+            const tabContent = document.getElementById('daysContent');
+            const days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+            
+            let totalCalories = 0, totalProteins = 0, totalCarbs = 0, totalFats = 0;
+            
+            let html = '';
+            
+            days.forEach((day, index) => {
+                const dayData = plan[day];
+                const dayId = day.toLowerCase();
+                const isActive = index === 0 ? 'show active' : '';
+                
+                totalCalories += dayData.totals.calories;
+                totalProteins += dayData.totals.proteins;
+                totalCarbs += dayData.totals.carbs;
+                totalFats += dayData.totals.fats;
+                
+                html += `
+                    <div class="tab-pane fade ${isActive}" id="${dayId}" role="tabpanel">
+                        <div class="p-4 bg-light rounded-bottom">
+                            <!-- Day Summary -->
+                            <div class="row mb-4">
+                                <div class="col-md-3">
+                                    <div class="text-center p-2 bg-white rounded">
+                                        <strong class="text-primary">${dayData.totals.calories}</strong>
+                                        <small class="d-block text-muted">kcal</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center p-2 bg-white rounded">
+                                        <strong class="text-danger">${dayData.totals.proteins}g</strong>
+                                        <small class="d-block text-muted">Protéines</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center p-2 bg-white rounded">
+                                        <strong class="text-warning">${dayData.totals.carbs}g</strong>
+                                        <small class="d-block text-muted">Glucides</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center p-2 bg-white rounded">
+                                        <strong class="text-info">${dayData.totals.fats}g</strong>
+                                        <small class="d-block text-muted">Lipides</small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Meals -->
+                            <div class="row g-3">
+                `;
+                
+                const mealIcons = {
+                    'petit-dejeuner': { icon: 'fa-coffee', color: 'warning', name: 'Petit-déjeuner' },
+                    'collation-matin': { icon: 'fa-apple-alt', color: 'success', name: 'Collation Matin' },
+                    'dejeuner': { icon: 'fa-utensils', color: 'primary', name: 'Déjeuner' },
+                    'collation': { icon: 'fa-cookie', color: 'info', name: 'Collation' },
+                    'collation-soir': { icon: 'fa-cookie', color: 'info', name: 'Collation Soir' },
+                    'diner': { icon: 'fa-moon', color: 'secondary', name: 'Dîner' }
+                };
+                
+                for (const [mealType, meal] of Object.entries(dayData.meals)) {
+                    if (meal) {
+                        const icon = mealIcons[mealType] || { icon: 'fa-utensils', color: 'primary', name: mealType };
+                        html += `
+                            <div class="col-md-6 col-lg-4">
+                                <div class="card meal-card h-100">
+                                    <div class="card-header bg-${icon.color} bg-opacity-10">
+                                        <h6 class="mb-0">
+                                            <span class="meal-type-icon bg-${icon.color} text-white me-2">
+                                                <i class="fas ${icon.icon}"></i>
+                                            </span>
+                                            ${icon.name}
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <h6 class="card-title">${meal.name}</h6>
+                                        <div class="d-flex flex-wrap mb-2">
+                                            <span class="badge bg-light text-dark me-1">${meal.calories} kcal</span>
+                                            <span class="badge bg-danger bg-opacity-10 text-danger me-1">P: ${meal.proteins}g</span>
+                                            <span class="badge bg-warning bg-opacity-10 text-warning me-1">G: ${meal.carbs}g</span>
+                                            <span class="badge bg-info bg-opacity-10 text-info">L: ${meal.fats}g</span>
+                                        </div>
+                                        <div class="mt-2">
+                                            ${meal.ingredients.map(i => `<span class="ingredient-tag">${i}</span>`).join('')}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+                
+                html += `
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            tabContent.innerHTML = html;
+            
+            // Update averages
+            document.getElementById('avgCalories').textContent = Math.round(totalCalories / 7);
+            document.getElementById('avgProteins').textContent = Math.round(totalProteins / 7) + 'g';
+            document.getElementById('avgCarbs').textContent = Math.round(totalCarbs / 7) + 'g';
+            document.getElementById('avgFats').textContent = Math.round(totalFats / 7) + 'g';
+        }
+
+        function generateShoppingListFromPlan() {
+            if (!currentPlan) {
+                alert('Veuillez d\'abord générer un plan !');
+                return;
+            }
+            
+            shoppingListManager.generateFromMealPlan(currentPlan);
+            shoppingListManager.open();
+        }
+
+        function exportMealPlan() {
+            if (!currentPlan) {
+                alert('Veuillez d\'abord générer un plan !');
+                return;
+            }
+            
+            if (typeof window.mealPlannerExport !== 'undefined') {
+                window.mealPlannerExport.toPDF(currentPlan);
+            } else {
+                // Simple text export
+                let text = '📅 PLAN DE REPAS HEBDOMADAIRE - NutriSport\n';
+                text += '═'.repeat(50) + '\n\n';
+                
+                for (const day in currentPlan) {
+                    text += `📌 ${day.toUpperCase()}\n`;
+                    const dayData = currentPlan[day];
+                    for (const [mealType, meal] of Object.entries(dayData.meals)) {
+                        if (meal) {
+                            text += `  • ${mealType}: ${meal.name} (${meal.calories} kcal)\n`;
+                        }
+                    }
+                    text += `  Total: ${dayData.totals.calories} kcal | P:${dayData.totals.proteins}g | G:${dayData.totals.carbs}g | L:${dayData.totals.fats}g\n\n`;
+                }
+                
+                navigator.clipboard.writeText(text).then(() => {
+                    alert('Plan copié dans le presse-papier !');
+                });
+            }
+        }
+
+        // Load user's calorie goal from profile
+        document.addEventListener('DOMContentLoaded', function() {
+            const user = JSON.parse(localStorage.getItem('nutrisport_current_user') || '{}');
+            const profile = JSON.parse(localStorage.getItem(`nutrisport_profile_${user.email}`) || '{}');
+            
+            if (profile.calorieTarget) {
+                document.getElementById('targetCalories').value = profile.calorieTarget;
+            }
+            
+            // Auto-select goal from profile
+            if (profile.objectif) {
+                const goalMapping = {
+                    'perdre': 'perte-poids',
+                    'prendre': 'prise-masse',
+                    'maintenir': 'maintien'
+                };
+                const mappedGoal = goalMapping[profile.objectif];
+                if (mappedGoal) {
+                    selectGoal(mappedGoal);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
