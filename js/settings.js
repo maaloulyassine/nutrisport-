@@ -151,7 +151,7 @@ function requestNotificationPermission() {
             // Send test notification
             new Notification('NutriSport', {
                 body: 'Les notifications sont maintenant activées !',
-                icon: '../assets/logo.png'
+                icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🏋️</text></svg>'
             });
         } else {
             showToast('Les notifications ont été refusées', 'warning');

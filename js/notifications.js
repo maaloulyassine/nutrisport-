@@ -126,8 +126,8 @@ function sendNotification(title, body, type) {
     if (notificationPermission) {
         const notification = new Notification(title, {
             body: body,
-            icon: '../assets/logo.png',
-            badge: '../assets/logo.png',
+            icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🏋️</text></svg>',
+            badge: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🏋️</text></svg>',
             tag: type,
             requireInteraction: false
         });
