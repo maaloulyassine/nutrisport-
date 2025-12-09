@@ -1,41 +1,48 @@
 // ===== Service Worker for Offline Support =====
 
-const CACHE_NAME = 'nutrisport-v1';
+const CACHE_NAME = 'nutrisport-v2';
 const urlsToCache = [
-  '/html/index.html',
-  '/html/goals.html',
-  '/html/food-diary.html',
-  '/html/chatbot.html',
-  '/html/settings.html',
-  '/html/login.html',
-  '/html/signup.html',
-  '/css/styles.css',
-  '/js/main.js',
-  '/js/goals.js',
-  '/js/food-diary.js',
-  '/js/chatbot.js',
-  '/js/settings.js',
-  '/js/login.js',
-  '/js/signup.js',
-  '/js/dark-mode.js',
-  '/js/food-database.js',
-  '/js/achievements.js',
-  '/js/statistics.js',
-  '/js/export.js',
-  '/js/mini-chatbot.js',
-  '/js/notifications.js',
-  'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css',
-  'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
+  './index.html',
+  './html/index.html',
+  './html/goals.html',
+  './html/food-diary.html',
+  './html/chatbot.html',
+  './html/settings.html',
+  './html/login.html',
+  './html/signup.html',
+  './html/dashboard.html',
+  './css/styles.css',
+  './js/main.js',
+  './js/goals.js',
+  './js/food-diary.js',
+  './js/chatbot.js',
+  './js/settings.js',
+  './js/login.js',
+  './js/signup.js',
+  './js/dark-mode.js',
+  './js/nutrition-database.js',
+  './js/achievements.js',
+  './js/statistics.js',
+  './js/export.js',
+  './js/mini-chatbot.js',
+  './js/notifications.js',
+  './js/image-analyzer.js',
+  './js/ml-recognizer.js',
+  './js/pwa.js'
 ];
 
-// Install event
+// Install event - with fallback for failed requests
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
         console.log('Cache opened');
-        return cache.addAll(urlsToCache);
+        // Cache files one by one to avoid total failure
+        return Promise.allSettled(
+          urlsToCache.map(url => 
+            cache.add(url).catch(err => console.warn('Failed to cache:', url))
+          )
+        );
       })
       .catch(error => {
         console.error('Cache installation failed:', error);
