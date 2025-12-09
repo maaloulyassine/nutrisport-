@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion - NutriSport</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <i class="fas fa-dumbbell"></i> NutriSport
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto" id="mainNav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">Accueil</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="dashboard.html">Calculateur</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="login.html">Connexion</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link btn-signup" href="signup.html">Inscription</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Login Form -->
+    <section class="form-section py-5">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-5 col-md-7">
+                    <div class="form-card">
+                        <div class="text-center mb-4">
+                            <i class="fas fa-sign-in-alt fa-3x text-primary"></i>
+                            <h2 class="mt-3">Connexion</h2>
+                            <p class="text-muted">Accédez à votre espace personnel</p>
+                        </div>
+
+                        <form id="loginForm" novalidate>
+                            <!-- Email -->
+                            <div class="mb-3">
+                                <label for="loginEmail" class="form-label">
+                                    <i class="fas fa-envelope"></i> Email
+                                </label>
+                                <input type="email" class="form-control" id="loginEmail" name="loginEmail" 
+                                       placeholder="exemple@email.com" required>
+                                <div class="invalid-feedback">
+                                    Veuillez entrer une adresse email valide.
+                                </div>
+                            </div>
+
+                            <!-- Mot de passe -->
+                            <div class="mb-3">
+                                <label for="loginPassword" class="form-label">
+                                    <i class="fas fa-lock"></i> Mot de Passe
+                                </label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="loginPassword" name="loginPassword" 
+                                           placeholder="Entrez votre mot de passe" required minlength="8">
+                                    <button class="btn btn-outline-secondary" type="button" id="toggleLoginPassword">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                                <div class="invalid-feedback">
+                                    Le mot de passe doit contenir au moins 8 caractères.
+                                </div>
+                            </div>
+
+                            <!-- Se souvenir de moi -->
+                            <div class="mb-3 d-flex justify-content-between align-items-center">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="rememberMe">
+                                    <label class="form-check-label" for="rememberMe">
+                                        Se souvenir de moi
+                                    </label>
+                                </div>
+                                <a href="#" class="text-primary">Mot de passe oublié ?</a>
+                            </div>
+
+                            <!-- Success/Error Messages -->
+                            <div id="loginMessage"></div>
+
+                            <!-- Submit Button -->
+                            <button type="submit" class="btn btn-primary w-100 btn-lg">
+                                <i class="fas fa-sign-in-alt"></i> Se Connecter
+                            </button>
+
+                            <div class="text-center mt-3">
+                                <p class="text-muted">
+                                    Pas encore de compte ? 
+                                    <a href="signup.html" class="text-primary fw-bold">Inscrivez-vous</a>
+                                </p>
+                            </div>
+                        </form>
+
+                        <!-- Demo Account Info -->
+                        <div class="alert alert-info mt-4" role="alert">
+                            <h6 class="alert-heading"><i class="fas fa-info-circle"></i> Compte de démonstration</h6>
+                            <p class="mb-0 small">
+                                <strong>Email:</strong> demo@nutrisport.com<br>
+                                <strong>Mot de passe:</strong> demo1234
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5><i class="fas fa-dumbbell"></i> NutriSport</h5>
+                    <p class="text-muted">Votre partenaire nutrition pour la performance sportive.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p class="text-muted">© 2025 NutriSport. Tous droits réservés.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/main.js"></script>
+    <script src="../js/login.js"></script>
+</body>
+</html>

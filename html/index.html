@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NutriSport - Votre Coach Nutritionnel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <i class="fas fa-dumbbell"></i> NutriSport
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto" id="mainNav">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="index.html">Accueil</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="dashboard.html">Calculateur</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="login.html">Connexion</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link btn-signup" href="signup.html">Inscription</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <div class="welcome-message" id="welcomeMessage"></div>
+                    <h1 class="display-4 fw-bold mb-4">Optimisez Votre Performance Sportive</h1>
+                    <p class="lead mb-4">
+                        NutriSport vous aide à définir des objectifs réalistes et à suivre votre alimentation au quotidien. 
+                        Calculez vos besoins, validez la faisabilité de vos objectifs, et suivez vos repas avec des rappels d'hydratation personnalisés.
+                    </p>
+                    <div class="d-flex gap-3 flex-wrap">
+                        <a href="signup.html" class="btn btn-primary btn-lg" id="ctaButton">
+                            <i class="fas fa-user-plus"></i> Commencer Gratuitement
+                        </a>
+                        <a href="goals.html" class="btn btn-outline-light btn-lg" id="secondaryButton">
+                            <i class="fas fa-bullseye"></i> Mes Objectifs
+                        </a>
+                    </div>
+                </div>
+                <div class="col-lg-6 text-center mt-5 mt-lg-0">
+                    <div class="hero-image">
+                        <i class="fas fa-heartbeat display-1 text-white"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section py-5">
+        <div class="container">
+            <h2 class="text-center mb-5">Pourquoi Choisir NutriSport ?</h2>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="feature-card text-center p-4">
+                        <div class="feature-icon mb-3">
+                            <i class="fas fa-bullseye fa-3x text-primary"></i>
+                        </div>
+                        <h4>Objectifs Validés</h4>
+                        <p>Définissez des objectifs réalistes avec validation automatique de leur faisabilité pour votre santé.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-card text-center p-4">
+                        <div class="feature-icon mb-3">
+                            <i class="fas fa-utensils fa-3x text-success"></i>
+                        </div>
+                        <h4>Journal Alimentaire</h4>
+                        <p>Suivez vos repas quotidiens et atteignez vos calories avec un suivi simplifié et intuitif.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-card text-center p-4">
+                        <div class="feature-icon mb-3">
+                            <i class="fas fa-tint fa-3x text-info"></i>
+                        </div>
+                        <h4>Hydratation Intelligente</h4>
+                        <p>Recevez des notifications personnalisées pour boire de l'eau calculées selon votre poids.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats-section py-5 bg-light">
+        <div class="container">
+            <div class="row text-center">
+                <div class="col-md-3 col-sm-6 mb-4">
+                    <div class="stat-item">
+                        <h2 class="display-4 fw-bold text-primary">10K+</h2>
+                        <p class="text-muted">Utilisateurs Actifs</p>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6 mb-4">
+                    <div class="stat-item">
+                        <h2 class="display-4 fw-bold text-success">95%</h2>
+                        <p class="text-muted">Satisfaction Client</p>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6 mb-4">
+                    <div class="stat-item">
+                        <h2 class="display-4 fw-bold text-warning">50+</h2>
+                        <p class="text-muted">Sports Couverts</p>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6 mb-4">
+                    <div class="stat-item">
+                        <h2 class="display-4 fw-bold text-danger">24/7</h2>
+                        <p class="text-muted">Support Disponible</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="how-it-works py-5">
+        <div class="container">
+            <h2 class="text-center mb-5">Comment Ça Marche ?</h2>
+            <div class="row">
+                <div class="col-md-3 text-center mb-4">
+                    <div class="step-number">1</div>
+                    <h5>Inscrivez-vous</h5>
+                    <p>Créez votre compte gratuitement en quelques secondes.</p>
+                </div>
+                <div class="col-md-3 text-center mb-4">
+                    <div class="step-number">2</div>
+                    <h5>Entrez Vos Données</h5>
+                    <p>Renseignez votre poids, taille, activité et objectifs.</p>
+                </div>
+                <div class="col-md-3 text-center mb-4">
+                    <div class="step-number">3</div>
+                    <h5>Recevez Votre Plan</h5>
+                    <p>Obtenez un plan nutritionnel personnalisé instantanément.</p>
+                </div>
+                <div class="col-md-3 text-center mb-4">
+                    <div class="step-number">4</div>
+                    <h5>Atteignez Vos Objectifs</h5>
+                    <p>Suivez votre plan et voyez vos performances s'améliorer.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5><i class="fas fa-dumbbell"></i> NutriSport</h5>
+                    <p class="text-white-50">Votre partenaire nutrition pour la performance sportive.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <div class="social-links">
+                        <a href="#" class="text-white me-3"><i class="fab fa-facebook fa-2x"></i></a>
+                        <a href="#" class="text-white me-3"><i class="fab fa-instagram fa-2x"></i></a>
+                        <a href="#" class="text-white"><i class="fab fa-twitter fa-2x"></i></a>
+                    </div>
+                    <p class="mt-3 text-white-50">© 2025 NutriSport. Tous droits réservés.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Floating Chatbot Widget -->
+    <div id="chatbotWidget">
+        <div id="chatbotButton" class="chatbot-button" onclick="toggleChatbot()">
+            <i class="fas fa-robot"></i>
+            <span class="chatbot-badge" id="chatbotBadge">IA</span>
+        </div>
+        
+        <div id="chatbotPopup" class="chatbot-popup" style="display: none;">
+            <div class="chatbot-header">
+                <div>
+                    <i class="fas fa-robot"></i>
+                    <strong>Assistant Nutrition IA</strong>
+                </div>
+                <button class="btn-close-chat" onclick="toggleChatbot()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="chatbot-body" id="miniChatMessages">
+                <div class="chat-message bot">
+                    <div class="message-avatar bot">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div style="max-width: 80%;">
+                        <div class="message-content bot">
+                            👋 Bonjour ! Je suis votre assistant nutrition IA.<br><br>
+                            Je peux vous aider avec :<br>
+                            • Questions nutritionnelles<br>
+                            • Analyse de photos de repas<br>
+                            • Conseils personnalisés<br><br>
+                            Posez-moi une question ou envoyez une photo de votre repas ! 📸
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chatbot-footer">
+                <input type="text" 
+                       id="miniChatInput" 
+                       class="mini-chat-input" 
+                       placeholder="Posez votre question..."
+                       onkeypress="handleMiniChatKeyPress(event)">
+                <button class="btn-send-mini" onclick="sendMiniMessage()">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+            
+            <div class="chatbot-full-link">
+                <a href="chatbot.html" class="text-decoration-none">
+                    <i class="fas fa-expand"></i> Ouvrir en plein écran
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/main.js"></script>
+    <script src="../js/mini-chatbot.js"></script>
+    <script src="../js/dark-mode.js"></script>
+    <script src="../js/pwa.js"></script>
+    <script src="../js/achievements.js"></script>
+</body>
+</html>

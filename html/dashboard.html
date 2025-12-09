@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - NutriSport</title>
+    <link rel="manifest" href="../manifest.json">
+    <meta name="theme-color" content="#0d6efd">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <i class="fas fa-dumbbell"></i> NutriSport
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto" id="mainNav"></ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Dashboard Container -->
+    <div class="container my-5">
+        <div class="row mb-4">
+            <div class="col">
+                <h1 class="display-5"><i class="fas fa-chart-line"></i> Tableau de Bord</h1>
+                <p class="lead">Vue d'ensemble de votre progression</p>
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-primary" onclick="window.exportSystem.toPDF()">
+                    <i class="fas fa-file-pdf"></i> Export PDF
+                </button>
+                <button class="btn btn-success" onclick="window.exportSystem.allDataJSON()">
+                    <i class="fas fa-download"></i> Backup
+                </button>
+            </div>
+        </div>
+
+        <!-- Performance Score Card -->
+        <div class="card mb-4" id="performanceCard" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+            <div class="card-body text-center py-5">
+                <h2 class="mb-3">Score de Performance</h2>
+                <div class="display-1 fw-bold mb-3" id="performanceScore">-</div>
+                <h4 id="performanceLevel">Chargement...</h4>
+                <div class="mt-4">
+                    <i class="fas fa-trophy fa-3x"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-fire fa-2x text-danger mb-2"></i>
+                        <h5 class="card-title">Série Actuelle</h5>
+                        <p class="display-6 fw-bold text-primary" id="currentStreak">0</p>
+                        <small class="text-muted">jours consécutifs</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-utensils fa-2x text-success mb-2"></i>
+                        <h5 class="card-title">Total Repas</h5>
+                        <p class="display-6 fw-bold text-primary" id="totalMeals">0</p>
+                        <small class="text-muted">enregistrés</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-check-circle fa-2x text-info mb-2"></i>
+                        <h5 class="card-title">Taux Réussite</h5>
+                        <p class="display-6 fw-bold text-primary" id="goalRate">0%</p>
+                        <small class="text-muted">objectifs atteints</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-trophy fa-2x text-warning mb-2"></i>
+                        <h5 class="card-title">Badges</h5>
+                        <p class="display-6 fw-bold text-primary" id="badgeCount">0/13</p>
+                        <small class="text-muted">débloqués</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row g-4 mb-4">
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-chart-line"></i> Évolution Calorique (7 jours)</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="weeklyCaloriesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-chart-pie"></i> Répartition Macronutriments</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="macrosChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Comparisons & Achievements -->
+        <div class="row g-4 mb-4">
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-users"></i> Comparaison avec la Moyenne</h5>
+                    </div>
+                    <div class="card-body" id="comparisonSection">
+                        <p class="text-center text-muted">Chargement...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-medal"></i> Achievements Récents</h5>
+                    </div>
+                    <div class="card-body" id="achievementsSection">
+                        <p class="text-center text-muted">Chargement...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Suggestions -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-lightbulb"></i> Suggestions Personnalisées</h5>
+            </div>
+            <div class="card-body" id="suggestionsSection">
+                <p class="text-center text-muted">Chargement...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/main.js"></script>
+    <script src="../js/dark-mode.js"></script>
+    <script src="../js/pwa.js"></script>
+    <script src="../js/statistics.js"></script>
+    <script src="../js/achievements.js"></script>
+    <script src="../js/comparisons.js"></script>
+    <script src="../js/export.js"></script>
+    <script src="../js/dashboard-ui.js"></script>
+</body>
+</html>
