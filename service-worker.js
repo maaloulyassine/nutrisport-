@@ -1,6 +1,6 @@
 // ===== Service Worker for Offline Support =====
 
-const CACHE_NAME = 'nutrisport-v4';
+const CACHE_NAME = 'nutrisport-v5';
 const urlsToCache = [
   './index.html',
   './html/index.html',
@@ -140,4 +140,11 @@ self.addEventListener('notificationclick', event => {
   event.waitUntil(
     clients.openWindow(event.notification.data)
   );
+});
+
+// Handle skip waiting message from client
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });

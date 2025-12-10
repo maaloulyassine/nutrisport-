@@ -13,7 +13,7 @@ function initPWA() {
             ? '../service-worker.js' 
             : './service-worker.js';
         
-        navigator.serviceWorker.register(swPath)
+        navigator.serviceWorker.register(swPath, { updateViaCache: 'none' })
             .then(registration => {
                 console.log('Service Worker registered:', registration);
                 swRegistration = registration;
@@ -21,11 +21,20 @@ function initPWA() {
                 // Force check for updates immediately
                 registration.update();
                 
+                // Check for updates every 30 seconds
+                setInterval(() => {
+                    registration.update();
+                }, 30000);
+                
                 // Check for updates
                 registration.addEventListener('updatefound', () => {
                     const newWorker = registration.installing;
                     newWorker.addEventListener('statechange', () => {
                         if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            // Auto-update immediately
+                            if (newWorker.state === 'installed') {
+                                newWorker.postMessage({ type: 'SKIP_WAITING' });
+                            }
                             showUpdateNotification();
                         }
                     });
