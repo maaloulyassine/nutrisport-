@@ -891,10 +891,6 @@ body.dark-mode .btn-dark-mode {
     gap: 10px;
 }
 
-.btn-pwa-info {
-    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%) !important;
-}
-
 /* ===== Smart Notifications ===== */
 .smart-notification {
     position: fixed;

@@ -81,7 +81,6 @@ function showInstallButton() {
     installBtn.onclick = handleInstallClick;
     
     document.body.appendChild(installBtn);
-    updateInstallButtonState();
 }
 
 // Update button state based on whether prompt is available
@@ -89,14 +88,8 @@ function updateInstallButtonState() {
     const btn = document.getElementById('pwaInstallBtn');
     if (!btn) return;
     
-    if (deferredPrompt) {
-        btn.innerHTML = '<i class="fas fa-download"></i> Installer l\'app';
-        btn.classList.remove('btn-pwa-info');
-        btn.classList.add('btn-pwa-install');
-    } else {
-        btn.innerHTML = '<i class="fas fa-mobile-alt"></i> Installer';
-        btn.classList.add('btn-pwa-info');
-    }
+    // Always keep the same text and style
+    btn.innerHTML = '<i class="fas fa-download"></i> Installer l\'app';
 }
 
 // Handle install button click
