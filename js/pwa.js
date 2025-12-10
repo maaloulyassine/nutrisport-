@@ -2,6 +2,7 @@
 
 let deferredPrompt;
 let swRegistration = null;
+let installButtonShown = false;
 
 // Initialize PWA
 function initPWA() {
@@ -44,7 +45,8 @@ function initPWA() {
     window.addEventListener('beforeinstallprompt', e => {
         e.preventDefault();
         deferredPrompt = e;
-        showInstallButton();
+        // Update button if already shown
+        updateInstallButtonState();
     });
     
     // Handle successful installation
@@ -52,19 +54,177 @@ function initPWA() {
         console.log('PWA installed successfully');
         deferredPrompt = null;
         hideInstallButton();
+        // Save installation state
+        localStorage.setItem('pwaInstalled', 'true');
     });
+    
+    // Always show install button if not running as PWA and not already installed
+    if (!isRunningAsPWA() && !localStorage.getItem('pwaInstalled')) {
+        showInstallButton();
+    }
 }
 
-// Show install button
+// Show install button - always visible on all pages
 function showInstallButton() {
+    // Don't create duplicate buttons
+    if (document.getElementById('pwaInstallBtn')) {
+        updateInstallButtonState();
+        return;
+    }
+    
+    installButtonShown = true;
+    
     const installBtn = document.createElement('button');
     installBtn.id = 'pwaInstallBtn';
     installBtn.className = 'btn btn-pwa-install';
     installBtn.innerHTML = '<i class="fas fa-download"></i> Installer l\'app';
-    installBtn.onclick = promptInstall;
+    installBtn.onclick = handleInstallClick;
     
     document.body.appendChild(installBtn);
+    updateInstallButtonState();
 }
+
+// Update button state based on whether prompt is available
+function updateInstallButtonState() {
+    const btn = document.getElementById('pwaInstallBtn');
+    if (!btn) return;
+    
+    if (deferredPrompt) {
+        btn.innerHTML = '<i class="fas fa-download"></i> Installer l\'app';
+        btn.classList.remove('btn-pwa-info');
+        btn.classList.add('btn-pwa-install');
+    } else {
+        btn.innerHTML = '<i class="fas fa-mobile-alt"></i> Installer';
+        btn.classList.add('btn-pwa-info');
+    }
+}
+
+// Handle install button click
+function handleInstallClick() {
+    if (deferredPrompt) {
+        promptInstall();
+    } else {
+        showInstallInstructions();
+    }
+}
+
+// Show installation instructions modal
+function showInstallInstructions() {
+    // Remove existing modal if any
+    const existingModal = document.getElementById('pwaInstallModal');
+    if (existingModal) existingModal.remove();
+    
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isAndroid = /Android/.test(navigator.userAgent);
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    
+    let instructions = '';
+    
+    if (isIOS) {
+        instructions = `
+            <div class="install-step">
+                <span class="step-number">1</span>
+                <span>Appuyez sur <i class="fas fa-share-square"></i> (Partager)</span>
+            </div>
+            <div class="install-step">
+                <span class="step-number">2</span>
+                <span>Faites défiler et appuyez sur <strong>"Sur l'écran d'accueil"</strong></span>
+            </div>
+            <div class="install-step">
+                <span class="step-number">3</span>
+                <span>Appuyez sur <strong>"Ajouter"</strong></span>
+            </div>
+        `;
+    } else if (isAndroid) {
+        instructions = `
+            <div class="install-step">
+                <span class="step-number">1</span>
+                <span>Appuyez sur <i class="fas fa-ellipsis-v"></i> (Menu)</span>
+            </div>
+            <div class="install-step">
+                <span class="step-number">2</span>
+                <span>Appuyez sur <strong>"Installer l'application"</strong> ou <strong>"Ajouter à l'écran d'accueil"</strong></span>
+            </div>
+            <div class="install-step">
+                <span class="step-number">3</span>
+                <span>Confirmez l'installation</span>
+            </div>
+        `;
+    } else {
+        instructions = `
+            <div class="install-step">
+                <span class="step-number">1</span>
+                <span>Cliquez sur <i class="fas fa-plus-circle"></i> dans la barre d'adresse</span>
+            </div>
+            <div class="install-step">
+                <span class="step-number">2</span>
+                <span>Ou allez dans le menu <i class="fas fa-ellipsis-v"></i> et sélectionnez <strong>"Installer NutriSport"</strong></span>
+            </div>
+            <div class="install-step">
+                <span class="step-number">3</span>
+                <span>Confirmez l'installation</span>
+            </div>
+        `;
+    }
+    
+    const modal = document.createElement('div');
+    modal.id = 'pwaInstallModal';
+    modal.className = 'pwa-install-modal';
+    modal.innerHTML = `
+        <div class="pwa-install-modal-content">
+            <div class="pwa-install-modal-header">
+                <h4><i class="fas fa-mobile-alt text-primary"></i> Installer NutriSport</h4>
+                <button class="pwa-modal-close" onclick="closePwaModal()">&times;</button>
+            </div>
+            <div class="pwa-install-modal-body">
+                <p class="text-muted mb-3">Installez l'application pour un accès rapide et une utilisation hors ligne !</p>
+                <div class="install-benefits mb-4">
+                    <div class="benefit"><i class="fas fa-bolt text-warning"></i> Accès rapide</div>
+                    <div class="benefit"><i class="fas fa-wifi-slash text-info"></i> Fonctionne hors ligne</div>
+                    <div class="benefit"><i class="fas fa-bell text-danger"></i> Notifications</div>
+                </div>
+                <h6 class="mb-3">Comment installer :</h6>
+                ${instructions}
+            </div>
+            <div class="pwa-install-modal-footer">
+                <button class="btn btn-secondary" onclick="closePwaModal()">Fermer</button>
+                <button class="btn btn-outline-primary" onclick="dismissInstallButton()">
+                    <i class="fas fa-times"></i> Ne plus afficher
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Show with animation
+    setTimeout(() => modal.classList.add('show'), 10);
+    
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closePwaModal();
+    });
+}
+
+// Close PWA modal
+function closePwaModal() {
+    const modal = document.getElementById('pwaInstallModal');
+    if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => modal.remove(), 300);
+    }
+}
+
+// Dismiss install button permanently
+function dismissInstallButton() {
+    localStorage.setItem('pwaInstalled', 'true');
+    closePwaModal();
+    hideInstallButton();
+}
+
+// Make functions globally available
+window.closePwaModal = closePwaModal;
+window.dismissInstallButton = dismissInstallButton;
 
 // Hide install button
 function hideInstallButton() {
