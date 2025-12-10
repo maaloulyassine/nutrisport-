@@ -1,6 +1,6 @@
 // ===== Service Worker for Offline Support =====
 
-const CACHE_NAME = 'nutrisport-v5';
+const CACHE_NAME = 'nutrisport-v6';
 const urlsToCache = [
   './index.html',
   './html/index.html',

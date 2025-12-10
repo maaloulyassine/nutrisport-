@@ -65,12 +65,19 @@ function initPWA() {
         hideInstallButton();
         // Save installation state
         localStorage.setItem('pwaInstalled', 'true');
+        localStorage.removeItem('pwaButtonDismissed'); // Reset dismissed state
     });
     
-    // Always show install button if not running as PWA and not already installed
-    if (!isRunningAsPWA() && !localStorage.getItem('pwaInstalled')) {
+    // Show install button only if:
+    // 1. Not running as PWA
+    // 2. Not already installed
+    // 3. User hasn't dismissed the button
+    if (!isRunningAsPWA() && !localStorage.getItem('pwaInstalled') && !localStorage.getItem('pwaButtonDismissed')) {
         showInstallButton();
     }
+    
+    // Show mobile tip alert
+    showMobileTip();
 }
 
 // Show install button - always visible on all pages
@@ -219,7 +226,7 @@ function closePwaModal() {
 
 // Dismiss install button permanently
 function dismissInstallButton() {
-    localStorage.setItem('pwaInstalled', 'true');
+    localStorage.setItem('pwaButtonDismissed', 'true');
     closePwaModal();
     hideInstallButton();
 }
@@ -227,6 +234,71 @@ function dismissInstallButton() {
 // Make functions globally available
 window.closePwaModal = closePwaModal;
 window.dismissInstallButton = dismissInstallButton;
+window.resetInstallButton = resetInstallButton;
+window.closeMobileTip = closeMobileTip;
+
+// Reset install button (for when user uninstalls app)
+function resetInstallButton() {
+    localStorage.removeItem('pwaInstalled');
+    localStorage.removeItem('pwaButtonDismissed');
+    showInstallButton();
+}
+
+// Show mobile tip alert
+function showMobileTip() {
+    // Check if on mobile device
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    // Don't show if already dismissed today or not on mobile
+    if (!isMobile) return;
+    
+    const lastDismissed = localStorage.getItem('mobileTipDismissed');
+    const today = new Date().toDateString();
+    
+    if (lastDismissed === today) return;
+    
+    // Wait a bit before showing
+    setTimeout(() => {
+        const tipAlert = document.createElement('div');
+        tipAlert.id = 'mobileTipAlert';
+        tipAlert.className = 'mobile-tip-alert';
+        tipAlert.innerHTML = `
+            <div class="mobile-tip-content">
+                <div class="mobile-tip-icon">
+                    <i class="fas fa-lightbulb"></i>
+                </div>
+                <div class="mobile-tip-text">
+                    <strong>💡 Astuce</strong>
+                    <p>Pour une meilleure expérience, essayez le <strong>mode PC</strong> dans les paramètres de votre navigateur !</p>
+                </div>
+                <button class="mobile-tip-close" onclick="closeMobileTip()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+        
+        document.body.appendChild(tipAlert);
+        
+        // Show with animation
+        setTimeout(() => tipAlert.classList.add('show'), 100);
+        
+        // Auto-hide after 10 seconds
+        setTimeout(() => {
+            closeMobileTip();
+        }, 10000);
+    }, 2000);
+}
+
+// Close mobile tip
+function closeMobileTip() {
+    const tip = document.getElementById('mobileTipAlert');
+    if (tip) {
+        tip.classList.remove('show');
+        setTimeout(() => tip.remove(), 300);
+    }
+    // Don't show again today
+    localStorage.setItem('mobileTipDismissed', new Date().toDateString());
+}
 
 // Hide install button
 function hideInstallButton() {

@@ -891,6 +891,78 @@ body.dark-mode .btn-dark-mode {
     gap: 10px;
 }
 
+/* ===== Mobile Tip Alert ===== */
+.mobile-tip-alert {
+    position: fixed;
+    bottom: -150px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9998;
+    transition: bottom 0.4s ease;
+    width: 90%;
+    max-width: 450px;
+}
+
+.mobile-tip-alert.show {
+    bottom: 20px;
+}
+
+.mobile-tip-content {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeeba 100%);
+    border: 1px solid #ffc107;
+    border-radius: 15px;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+}
+
+.mobile-tip-icon {
+    background: #ffc107;
+    color: #856404;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+}
+
+.mobile-tip-text {
+    flex: 1;
+}
+
+.mobile-tip-text strong {
+    color: #856404;
+    display: block;
+    margin-bottom: 3px;
+}
+
+.mobile-tip-text p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #664d03;
+    line-height: 1.4;
+}
+
+.mobile-tip-close {
+    background: none;
+    border: none;
+    color: #856404;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 5px;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.mobile-tip-close:hover {
+    opacity: 1;
+}
+
 /* ===== Smart Notifications ===== */
 .smart-notification {
     position: fixed;
